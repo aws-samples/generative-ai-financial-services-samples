@@ -1,0 +1,36 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Cache folder
+cache/
+*cache
+
+# IDE / editor specific
+.vscode/
+.idea/
+
+# Python virtual environment
+venv/
+myenvname/
+
+# Generated documentation
+docs/_build/
+
+.DS_Store
+../.DS_Store
+*/.DS_Store
+*.DS_Store
+
+*/.DS_Store
+*/*.DS_Store
+
+requirements-dev-test.txt
+reviews
+run_reviews.py
+review_report**
+.env

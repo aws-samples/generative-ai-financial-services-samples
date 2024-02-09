@@ -1,0 +1,10 @@
+boto3
+botocore
+pandas
+pyyaml
+streamlit
+langchain
+nltk
+opensearch-py
+pdfplumber
+python-dotenv

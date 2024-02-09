@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  financialqabot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: financialqabot-image
+    container_name: financialqa-container
+    ports:
+      - 8501:8501
+    volumes:
+      - .:/app
+      - ./cache:/app/cache
+      - ${AWS_CREDENTIALS_PATH:-${USERPROFILE:-${HOME}}/.aws/credentials}:/root/.aws/credentials:ro
+    environment:
+      PYTHONUNBUFFERED: 1
+      AWS_PROFILE: default
+    tty: true
+    restart: always

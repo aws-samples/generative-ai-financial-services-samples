@@ -1,0 +1,8 @@
+corpus: docs/
+extension: '*.*'
+
+# Labels; datapoint -> question
+datapoint_master: labels/master.json
+
+# Labels: filename -> labels
+datapoint_labels: docs/labels_10.jsonl

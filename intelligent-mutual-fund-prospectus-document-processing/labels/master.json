@@ -1,0 +1,23 @@
+{
+    "Fund Name": "What is the fund name? (which should be listed at the top of the document and may have the fund ticker listed next to the fund name)", 
+    "CUSIP": "What is the fund's CUSIP? This is a string that matches regular expression /\\s[0-9][0-9A-Z]{8}\\s/ . If the document includes more than one, then list them all, in order of appearance.", 
+    "Share Class": "What is the fund's share class? (which may be classes like Retail, Institutional, Retirement, Admiral, etc., or abbreviations like A, C, B, R, R2, etc.). If the document says ETF, return NOT_FOUND instead. If the document includes more than one, then list them all, in order of appearance.", 
+    "Ticker": "What is the fund's ticker? This is a string that matches regular expression /\\s[A-Z]{5}\\s/ . If the document includes more than one, then list them all, in order of appearance.", 
+    "Report Date": "What is the Report Date or As-Of Date in the document's header? The date of the report (which appears in the first 100 words of the document, is not part of a sentence, and contains the day, month and year).", 
+    "Report Quarter": "What is the quarter listed at the top of the document? his is a string that matches regular expression /\\sQ[1-4][0-9]{0,4}\\s/ or /\\s[1-4]Q[0-9]{0,4}\\s/ .", 
+    "Document Type": "What is the document type (i.e. a string that matches regular expression /\\sFACT(\\s?)SHEET\\s/i .) listed at the top of the document?", 
+    "Management Discussion": "List all paragraphs describing the fund's strategy and competitive advantages.", 
+    "Performance": "List all tables describing the fund's performance.", 
+    "Positioning": "List all tables describing the positions held by the fund.", 
+    "Growth of 10K chart": "What is the text in the section that describes the performance of at $10,000 investment in the fund?", 
+    "Benchmark Funds": "What is the benchmark that this fund's performance is measured against?", 
+    "Costs paid as a percentage of a $10,000 investment": "What are the fund's management fees?", 
+    "Expense example disclaimer": "What is the paragraph describing the fund's expenses?", 
+    "Legend": "What is the paragraph that contains contact information to receive updated performance?", 
+    "Net assets": "What are the fund's net assets?", 
+    "Total number of portfolio holdings": "What is the fund's total number of portfolio holdings?", 
+    "Portfolio turnover rate": "What is the fund's portfolio turnover rate?", 
+    "Sector Graph": "What is the fund's sector graph?", 
+    "Sector Breakdown": "List all tables describing the sector breakdown of positions held by the fund.", 
+    "Top 10 Holdings": "List all tables describing the top 10 assets or positions held by the fund."
+}
