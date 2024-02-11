@@ -1,4 +1,4 @@
-# aws-generative-ai-financial-services-examples
+# generative-ai-financial-services-examples
 
 
 
