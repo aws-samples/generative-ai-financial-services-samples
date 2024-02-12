@@ -146,7 +146,7 @@ To make the most out of our project, familiarize yourself with these key compone
 # Authors
 
 - [Dayo Oguntoyinbo](https://www.linkedin.com/in/iamdayo/)
-- [Kosta Belz](https://www.linkedin.com/feed/)
+- [Kosta Belz](https://ca.linkedin.com/in/bkostya)
 - [Max Winter](https://www.linkedin.com/in/maxwinter/)
 - [Rubén Afonso](https://www.linkedin.com/in/rubenafonso/)
 - [Samuel Baruffi](https://www.linkedin.com/in/samuelbaruffi/)
