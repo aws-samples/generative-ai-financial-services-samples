@@ -207,7 +207,7 @@ def main():
     # Ensure the environment is set up correctly
     check_env()
 
-    st.title("Intelligent Document Processing for Financial Services.")
+    st.title("Intelligent Mutual Fund Prospectus Document Processing")
 
     col1, col2 = st.columns([2.2, 2.0])  # Adjust the ratio as needed
 
