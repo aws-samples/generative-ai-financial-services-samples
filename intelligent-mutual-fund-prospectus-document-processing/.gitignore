@@ -30,7 +30,4 @@ docs/_build/
 */*.DS_Store
 
 requirements-dev-test.txt
-reviews
-run_reviews.py
-review_report**
 .env
