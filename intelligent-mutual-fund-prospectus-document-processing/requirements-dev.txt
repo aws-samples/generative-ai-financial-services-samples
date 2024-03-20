@@ -7,6 +7,6 @@ pandas==2.2.0
 pdfplumber==0.10.3
 streamlit==1.30.0
 python-dotenv==1.0.0
-black==23.12.1
+black==24.3.0
 bandit==1.7.6
 PyYAML==6.0.1
