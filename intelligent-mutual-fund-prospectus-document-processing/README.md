@@ -27,7 +27,7 @@ This repository beautifully marries the capabilities of:
 3. **Bedrock**: Crafting complex ML structures with ease.
 
 ## Pre-Requisists
-# Poppler
+### Poppler
 Poppler is an underlying project to convert PDF to images, that'll be sent to Claude 3 vision (multi-modal)
 
 To install Poppler, follow the instructions below:
@@ -41,8 +41,7 @@ To install Poppler, follow the instructions below:
 - MacOS
 `brew install poppler`
 
-
-# S3 Bucket
+### S3 Bucket
 
 Please create a S3 Bucket with a unique name and set an env variable called "BUCKET_NAME" before running `run.sh`. If you'd like to use the AWS CLI, you can run the following command to create a S3 bucket:
 
