@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import yaml
 import re
@@ -5,9 +6,6 @@ import base64
 from langchain_handler.langchain_qa import (
     validate_environment,
     amazon_bedrock_models,
-    amazon_bedrock_llm,
-    chain_qa,
-    search_and_answer,
     search_and_answer_claude_3_direct, 
     search_and_answer_textract
 )
@@ -21,9 +19,11 @@ from utils.utils_text import (
 )
 
 
-
 # Set page title
 st.set_page_config(page_title="FSI Insurance Q/A App", layout="wide")
+
+# Remove whitespace from the top of the page and sidebar
+st.write('<style>div.block-container{padding-top:2rem;}</style>', unsafe_allow_html=True)
 
 # Set content to center
 content_css = """
@@ -55,49 +55,6 @@ def check_env():
 def list_llm_models():
     models = list(amazon_bedrock_models().keys())
     return models
-
-
-@st.cache_resource
-def create_qa_chain(model_id, verbose=False):
-    if model_id in amazon_bedrock_models():
-        llm = amazon_bedrock_llm(model_id, verbose=verbose)
-    else:
-        assert False, f"Unknown {model_id}"
-
-    print("Make QA chain for", model_id)
-    print(llm)
-    return chain_qa(llm, verbose=verbose)
-
-
-@st.cache_resource
-def list_doc_source_instances():
-    return [InMemoryAny(config["corpus"] + config["extension"])]
-
-
-@st.cache_data
-def list_doc_sources():
-    return [str(x) for x in list_doc_source_instances()]
-
-
-def to_doc_source(doc_source_str: str) -> DocSource:
-    """String to class instance"""
-    return next(i for i in list_doc_source_instances() if str(i) == doc_source_str)
-
-
-@st.cache_data
-def list_doc(doc_source_nm):
-    doc_source = to_doc_source(doc_source_nm)
-    return doc_source.list_doc()
-
-
-def make_doc_store(doc_source_nm, doc_path):
-    doc_source = to_doc_source(doc_source_nm)
-    # Now capturing both values
-    store, num_docs = doc_source.make_doc_store(doc_path)
-    print(f"Number of documents: {num_docs}")
-    # Return both to the caller
-    return store, num_docs
-
 
 @st.cache_data
 def load_datapoint_master():
@@ -212,6 +169,8 @@ def main():
 
     st.title("Intelligent Document Processing for FSI Insurance.")
 
+    # Select a language model from the available options
+
     # Initialize session state variables
     if "modelID" not in st.session_state:
         st.session_state.modelID = None
@@ -219,38 +178,32 @@ def main():
         st.session_state.claude3direct = False
     
     col1, col2 = st.columns([2.2, 2.0])
-
     with col1:
-        with st.expander(label="# See Claude 3 Direct Architecture Diagram"):
-            st.image("./assets/claude_3_direct_diagram.png", use_column_width=True)
+        # Select OCR Tool
+        st.session_state.ocr_tool = st.selectbox("Select OCR Tool", ["Textract", "Claude 3 Vision"])
+        compatible_models = []
+        if st.session_state.ocr_tool == "Textract":
+            compatible_models = [model for model in list_llm_models()]
+        else:
+            compatible_models = ['anthropic.claude-3-sonnet-20240229-v1:0', "anthropic.claude-3-haiku-20240307-v1:0"]
     with col2: 
-        with st.expander(label="# See Textract Architecture Diagram"):
-            st.image("./assets/textract_diagram.png", use_column_width=True)
-
-    # Define doc_source_nm early on to ensure it's available when needed
-    with col1:  # Right side - Only the full PDF display
-        doc_source_nm = st.selectbox("Select documents source", list_doc_sources())
-        listdocs = list_doc(doc_source_nm)
-        pdf_docs = [doc for doc in listdocs if doc.endswith(".pdf")]
-
-        doc_path = st.selectbox("Select doc", pdf_docs, key="pdf_selector")
-        if doc_path.lower().endswith(".pdf"):
-            displayPDF(doc_path)
-
-    with col2:  # Left side - All settings and displays except the full PDF
-        # Select a language model from the available options
-        model_id = st.selectbox("Select LLM", list_llm_models())
+        model_id = st.selectbox("Select LLM", compatible_models)
 
         # Update session state variables
         st.session_state.modelID = model_id
+        
+    col1, col2 = st.columns([2.2, 2.0])
+    # Define doc_source_nm early on to ensure it's available when needed
+    with col1:  # Right side - Only the full PDF display
+        listdocs = os.listdir('./docs/insurance/')
+        relative_paths = [os.path.join('./docs/insurance/', file) for file in listdocs]
 
-        if (st.session_state.modelID == 'anthropic.claude-3-sonnet-20240229-v1:0') or st.session_state.modelID == "anthropic.claude-3-haiku-20240307-v1:0":
-            st.session_state.claude3direct = st.checkbox('Pass images to Claude 3 directly', label_visibility="visible")
-        else:
-            st.session_state.claude3direct = False
+        pdf_docs = [doc for doc in relative_paths if doc.endswith(".pdf")]
+
+        doc_path = st.selectbox("Select doc", pdf_docs, key="pdf_selector")
 
         # Handling user input for the question
-        question = st.selectbox("Select question", [""] + list_questions())
+        question = st.selectbox("Select question", [""] + list_questions(), )
         question = clean_question(question)
 
         # Allow user to input a custom question if needed
@@ -279,9 +232,21 @@ def main():
             max_chars=1000,
         )
 
+        if doc_path.lower().endswith(".pdf"):
+            displayPDF(doc_path)
+            
+
+    with col2:  # Left side - All settings and displays except the full PDF
+        # Select a language model from the available options
+        with st.expander('Architecture Diagram', expanded=True): 
+            if st.session_state.ocr_tool == 'Claude 3 Vision':
+                st.image("./assets/claude_3_direct_diagram.png", use_column_width=True)
+            else: 
+                st.image("./assets/textract_diagram.png", use_column_width=True)
+
 
         # code for processing the query and handling responses
-        if (st.session_state.modelID == 'anthropic.claude-3-sonnet-20240229-v1:0' or st.session_state.modelID == "anthropic.claude-3-haiku-20240307-v1:0") and st.session_state.claude3direct:
+        if st.session_state.ocr_tool == "Claude 3 Vision":
             print("Passing images to Claude 3 directly")
             response = search_and_answer_claude_3_direct(
                 file_path=doc_path,

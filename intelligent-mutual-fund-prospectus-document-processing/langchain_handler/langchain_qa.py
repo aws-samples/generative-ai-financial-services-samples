@@ -72,42 +72,6 @@ def amazon_bedrock_llm(model_id, verbose=False):
     llm.verbose = True
     return llm
 
-
-# Function to create an in-memory document store
-def create_in_memory_store(docs):
-    return InMemoryDocstore({doc.metadata["doc_id"]: doc for doc in docs})
-
-
-# Function to load a QA chain for a given LLM
-def chain_qa(llm, verbose=False):
-    return load_qa_chain(llm, chain_type="stuff", verbose=verbose)
-
-
-# Function to perform search and answer using a document store and a chain
-def search_and_answer(store, chain, query, k=2, doc_source_contains=None):
-    # Perform similarity search or document retrieval based on the store type
-    if isinstance(store, OpenSearchVectorSearch):
-        docs = store.similarity_search(
-            query,
-            k=k,
-            # include_metadata=False,
-            verbose=False,
-        )
-    elif isinstance(store, InMemoryDocstore):
-        docs = [store.search(i) for i in range(k)]
-    else:
-        assert False, f"Unknown doc store {type(store)}"
-
-    # Filter by name
-    if doc_source_contains is not None:
-        docs = [doc for doc in docs if doc_source_contains in doc.metadata["source"]]
-
-    print("Langchain IR has retrieved {} docs".format(len(docs)))
-
-    # Filter documents if necessary and run the chain to get a response
-    response = chain.run(input_documents=docs, question=query)
-    return {"response": response, "docs": docs}
-
 # Function to perform search and answer using the pdfs loaded into memory
 # as base64 encodings of the pdfs -> images then sent to claude 3 directly
 def search_and_answer_claude_3_direct(file_path, query, img_format="png"):

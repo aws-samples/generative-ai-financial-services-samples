@@ -1,8 +1,8 @@
-corpus: docs/
+corpus: docs/mutual_fund/
 extension: '*.*'
 
 # Labels; datapoint -> question
-datapoint_master: labels/master.json
+datapoint_master: docs/mutual_fund/questions.json
 
 # Labels: filename -> labels
-datapoint_labels: docs/labels_10.jsonl
+datapoint_labels: docs/mutual_fund/labels_10.jsonl
