@@ -4,7 +4,9 @@ pandas
 pyyaml
 streamlit
 langchain
+langchain-community
 nltk
 opensearch-py
 pdfplumber
 python-dotenv
+pdf2image==1.17.0

@@ -5,7 +5,7 @@ from ast import literal_eval
 from typing import Any, Optional, List
 from langchain.embeddings.bedrock import BedrockEmbeddings
 from langchain.callbacks.manager import CallbackManagerForLLMRun
-from langchain.llms.bedrock import Bedrock
+from langchain_community.chat_models import BedrockChat
 from utils.utils_os import write_text, read_text
 
 # Color codes for terminal output
@@ -13,7 +13,7 @@ c_blue, c_green, c_norm = "\033[94m", "\033[92m", "\033[0m"
 
 
 # A subclass of Bedrock class to incorporate caching
-class BedrockCached(Bedrock):
+class BedrockCached(BedrockChat):
     # A flag to control verbose logging
     verbose: bool = False
 

@@ -8,6 +8,8 @@ from langchain_handler.langchain_qa import (
     amazon_bedrock_llm,
     chain_qa,
     search_and_answer,
+    search_and_answer_claude_3_direct, 
+    search_and_answer_textract
 )
 from data_handlers.doc_source import DocSource, InMemoryAny
 from data_handlers.labels import load_labels_master, load_labels
@@ -19,8 +21,9 @@ from utils.utils_text import (
 )
 
 
+
 # Set page title
-st.set_page_config(page_title="Financial Q/A App", layout="wide")
+st.set_page_config(page_title="FSI Insurance Q/A App", layout="wide")
 
 # Set content to center
 content_css = """
@@ -207,9 +210,22 @@ def main():
     # Ensure the environment is set up correctly
     check_env()
 
-    st.title("Intelligent Mutual Fund Prospectus Document Processing")
+    st.title("Intelligent Document Processing for FSI Insurance.")
 
-    col1, col2 = st.columns([2.2, 2.0])  # Adjust the ratio as needed
+    # Initialize session state variables
+    if "modelID" not in st.session_state:
+        st.session_state.modelID = None
+    if "claude3direct" not in st.session_state:
+        st.session_state.claude3direct = False
+    
+    col1, col2 = st.columns([2.2, 2.0])
+
+    with col1:
+        with st.expander(label="# See Claude 3 Direct Architecture Diagram"):
+            st.image("./assets/claude_3_direct_diagram.png", use_column_width=True)
+    with col2: 
+        with st.expander(label="# See Textract Architecture Diagram"):
+            st.image("./assets/textract_diagram.png", use_column_width=True)
 
     # Define doc_source_nm early on to ensure it's available when needed
     with col1:  # Right side - Only the full PDF display
@@ -225,26 +241,13 @@ def main():
         # Select a language model from the available options
         model_id = st.selectbox("Select LLM", list_llm_models())
 
-        # Create a QA (Question Answering) chain based on the selected model
-        chain_qa = create_qa_chain(model_id, verbose=True)
-        prompt_trailer = "Answer in short."
+        # Update session state variables
+        st.session_state.modelID = model_id
 
-        if (
-            st.session_state.get("doc_source_nm", "") != doc_source_nm
-            or st.session_state.get("doc_path", "") != doc_path
-        ):
-            st.empty()
-
-            # Load vector store
-            store, num_docs = make_doc_store(doc_source_nm, doc_path)
-            st.session_state["doc_source_nm"] = doc_source_nm
-            st.session_state["doc_path"] = doc_path
-            st.session_state["store"] = store
-            st.session_state["num_docs"] = num_docs
+        if (st.session_state.modelID == 'anthropic.claude-3-sonnet-20240229-v1:0') or st.session_state.modelID == "anthropic.claude-3-haiku-20240307-v1:0":
+            st.session_state.claude3direct = st.checkbox('Pass images to Claude 3 directly', label_visibility="visible")
         else:
-            store = st.session_state["store"]
-            num_docs = st.session_state["num_docs"]
-            doc_path = st.session_state["doc_path"]
+            st.session_state.claude3direct = False
 
         # Handling user input for the question
         question = st.selectbox("Select question", [""] + list_questions())
@@ -261,7 +264,7 @@ def main():
             return
 
         # Construct the query by appending a trailer for concise answers
-        query = question + " " + prompt_trailer
+        query = question
         query = query.strip()
         print("Q:", query)
 
@@ -276,71 +279,71 @@ def main():
             max_chars=1000,
         )
 
+
         # code for processing the query and handling responses
-        K = 1
-        for attempt in range(4):
-            try:
-                response = search_and_answer(
-                    store,
-                    chain_qa,
-                    # prompt_template,
-                    query,
-                    k=num_docs,
-                )
-                answer = response["response"]
-                break  # Success
-            except Exception as e:
-                print(e)
-                st.spinner(text=type(e).__name__)
-                if type(e).__name__ == "ValidationException" and K > 1:
-                    print("Retrying using shorter context")
-                    K -= 1
-                elif type(e).__name__ == "ThrottlingException":
-                    print("Retrying")
-                else:
-                    # continue
-                    raise e
-
-        print(answer)
-
-        # Display the answer to the user
-        if "Helpful Answer:" in answer:
-            answer = answer.split("Helpful Answer:")[1]
-
-        # need a double-whitespace before \n to get a newline
-        # multiple questions at once
-        if "\n" in answer:
-            print("Split answer by newline")
-            st.write("**Answer**")
-            for line in answer.split("\n"):
-                st.text(line)
-        else:
-            st.write(f"**Answer**: :blue[{answer}]")
-
-        # Load and display ground truth if available
-        dp, gt = list_groundtruth(doc_path, question)
-        if gt:
-            st.markdown(
-                "**Ground truth**: " + markdown_bgcolor(gt, "yellow"),
-                unsafe_allow_html=True,
+        if (st.session_state.modelID == 'anthropic.claude-3-sonnet-20240229-v1:0' or st.session_state.modelID == "anthropic.claude-3-haiku-20240307-v1:0") and st.session_state.claude3direct:
+            print("Passing images to Claude 3 directly")
+            response = search_and_answer_claude_3_direct(
+                file_path=doc_path,
+                query=query,
             )
+            st.write(f"**Answer**: :blue[{response}]")
         else:
-            st.write("**Ground truth**: Not available")
+            K = 1
+            for attempt in range(4):
+                try:
+                    answer, all_text = search_and_answer_textract(
+                        file_path=doc_path,
+                        query=query,
+                    )
+                    break  # Success
+                except Exception as e:
+                    print(e)
+                    st.spinner(text=type(e).__name__)
+                    if type(e).__name__ == "ValidationException" and K > 1:
+                        print("Retrying using shorter context")
+                        K -= 1
+                    elif type(e).__name__ == "ThrottlingException":
+                        print("Retrying")
+                    else:
+                        # continue
+                        raise e
 
-        # Highlight and display evidence in the source documents
-        tokens_answer = text_tokenizer(answer)
-        tokens_labels = text_tokenizer(f"{gt}") if gt else []
-        tokens_miss = set(tokens_labels).difference(tokens_answer)
+            print(answer)
 
-        print("response n_docs", len(response["docs"]))
+            # Display the answer to the user
+            if "Helpful Answer:" in answer:
+                answer = answer.split("Helpful Answer:")[1]
 
-        # ... [code for marking and displaying the document content]
-        for i, doc in enumerate(response["docs"]):
+            # need a double-whitespace before \n to get a newline
+            # multiple questions at once
+            if "\n" in answer:
+                print("Split answer by newline")
+                st.write("**Answer**")
+                for line in answer.split("\n"):
+                    st.text(line)
+            else:
+                st.write(f"**Answer**: :blue[{answer}]")
+
+            # Load and display ground truth if available
+            dp, gt = list_groundtruth(doc_path, question)
+            if gt:
+                st.markdown(
+                    "**Ground truth**: " + markdown_bgcolor(gt, "yellow"),
+                    unsafe_allow_html=True,
+                )
+            else:
+                st.write("**Ground truth**: Not available")
+
+            # Highlight and display evidence in the source documents
+            tokens_answer = text_tokenizer(answer)
+            tokens_labels = text_tokenizer(f"{gt}") if gt else []
+            tokens_miss = set(tokens_labels).difference(tokens_answer)
+
+            # ... [code for marking and displaying the document content]
             st.divider()
 
-            markd = doc.page_content
-
-            markd = markdown_escape(markd)
+            markd = markdown_escape(all_text)
 
             markd = markdown2(text=markd, tokens=tokens_answer, bg_color="#90EE90")
             markd = markdown2(text=markd, tokens=tokens_miss, bg_color="red")
@@ -348,7 +351,6 @@ def main():
             print("done")
 
             st.markdown(markd, unsafe_allow_html=True)
-
 
 # Call the main function to run the app
 main()

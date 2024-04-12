@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 import os
 import glob
 from langchain.schema import Document
-from langchain.docstore import InMemoryDocstore
+from langchain_community.docstore import InMemoryDocstore
 from .load_pdf import load_doc
 from utils.utils_os import read_text
 
