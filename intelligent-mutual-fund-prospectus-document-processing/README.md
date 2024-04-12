@@ -26,7 +26,7 @@ This repository beautifully marries the capabilities of:
 2. **Streamlit**: An intuitive platform for crafting custom ML tools.
 3. **Bedrock**: Crafting complex ML structures with ease.
 
-## Pre-Requisists
+## Pre-Requisites
 ### Poppler
 Poppler is an underlying project to convert PDF to images, that'll be sent to Claude 3 vision (multi-modal)
 
