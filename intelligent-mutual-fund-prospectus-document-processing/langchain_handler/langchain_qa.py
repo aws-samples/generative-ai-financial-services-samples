@@ -110,7 +110,9 @@ def search_and_answer_claude_3_direct(file_path, query, img_format="png"):
 def search_and_answer_textract(file_path, query):
     s3 = boto3.client('s3')
     extractor = Textractor(profile_name="default")
-    bucket_name = 'travelers-demo'
+    # Read from os env var called BUCKET_NAME and put in a var called "bucket_name"
+    
+    bucket_name = os.environ['BUCKET_NAME']
     s3_key = os.path.basename(file_path)  # Get the file name from the file path
     txt_file_key = f"{s3_key}.txt"  # Text file name with the same base name as the input file
 

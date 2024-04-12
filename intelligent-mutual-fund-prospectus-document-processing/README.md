@@ -26,6 +26,40 @@ This repository beautifully marries the capabilities of:
 2. **Streamlit**: An intuitive platform for crafting custom ML tools.
 3. **Bedrock**: Crafting complex ML structures with ease.
 
+## Pre-Requisists
+# Poppler
+Poppler is an underlying project to convert PDF to images, that'll be sent to Claude 3 vision (multi-modal)
+
+To install Poppler, follow the instructions below:
+
+- Ubuntu
+`sudo apt-get install poppler-utils`
+
+- Archlinux
+`sudo pacman -S poppler`
+
+- MacOS
+`brew install poppler`
+
+
+# S3 Bucket
+
+Please create a S3 Bucket with a unique name and set an env variable called "BUCKET_NAME" before running `run.sh`. If you'd like to use the AWS CLI, you can run the following command to create a S3 bucket:
+
+```
+BUCKET_NAME=<TYPE YOUR BUCKET NAME>
+aws s3 mb s3://$BUCKET_NAME
+```
+
+Then you can set env. var as:
+
+```
+export BUCKET_NAME=$BUCKET_NAME
+```
+
+
+
+
 ## Install
 
 ```bash
@@ -37,6 +71,8 @@ conda activate financialqaenv
 pip install --upgrade pip
 pip install --upgrade -r requirements.txt
 ```
+
+
 
 ## Run
 

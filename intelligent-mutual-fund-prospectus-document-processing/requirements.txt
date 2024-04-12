@@ -10,3 +10,4 @@ opensearch-py
 pdfplumber
 python-dotenv
 pdf2image==1.17.0
+amazon-textract-textractor

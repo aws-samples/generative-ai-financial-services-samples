@@ -195,8 +195,8 @@ def main():
     col1, col2 = st.columns([2.2, 2.0])
     # Define doc_source_nm early on to ensure it's available when needed
     with col1:  # Right side - Only the full PDF display
-        listdocs = os.listdir('./docs/insurance/')
-        relative_paths = [os.path.join('./docs/insurance/', file) for file in listdocs]
+        listdocs = os.listdir('./docs/mutual_fund/')
+        relative_paths = [os.path.join('./docs/mutual_fund/', file) for file in listdocs]
 
         pdf_docs = [doc for doc in relative_paths if doc.endswith(".pdf")]
 
