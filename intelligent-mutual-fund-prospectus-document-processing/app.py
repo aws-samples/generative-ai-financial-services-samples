@@ -265,7 +265,7 @@ def main():
         # code for processing the query and handling responses
         if st.session_state.ocr_tool == "Claude 3 Vision":
             print("Passing images to Claude 3 directly")
-            with st.spinner("Processing pdf with Claude 3 Vision & querying bedrock"):
+            with st.spinner("Processing PDF with Claude 3 Vision"):
                 response = search_and_answer_claude_3_direct(
                     file_path=doc_path,
                     query=final_query,
@@ -275,7 +275,7 @@ def main():
             K = 1
             for attempt in range(4):
                 try:
-                    with st.spinner("Processing pdf with Textract & querying bedrock"):
+                    with st.spinner("Processing PDF with Textract"):
                         answer, all_text = search_and_answer_textract(
                             file_path=doc_path,
                             query=final_query,
