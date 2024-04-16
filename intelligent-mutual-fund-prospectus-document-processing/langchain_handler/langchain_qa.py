@@ -75,7 +75,7 @@ def amazon_bedrock_llm(model_id, verbose=False):
 # Function to perform search and answer using the pdfs loaded into memory
 # as base64 encodings of the pdfs -> images then sent to claude 3 directly
 def search_and_answer_claude_3_direct(file_path, query, img_format="png"):
-    images = convert_from_path(file_path, fmt=img_format)
+    images = convert_from_path(file_path, fmt=img_format, dpi=100)
     encoded_messages = []
     for i in range(len(images)):
         buffered = BytesIO()
@@ -93,11 +93,16 @@ def search_and_answer_claude_3_direct(file_path, query, img_format="png"):
         
         # append the question to the end
         encoded_messages.append({"type": "text", "text": f"""You are a data entry specialist and expert forensic document examiner.
+            Please answer the use question in the <QUESTION> XML tag, using only information in these images.
+            <QUESTION>
             {query}
-            For numeric data points, read each digit one at a time, and append each to the resulting data point string.
+            <QUESTION>
+            If the question requires you to read any numeric data points, read each digit one at a time, and append each to the resulting data point string.
             If the writing in a form field is hard to read, or has corrections, or overflows onto the margin, then surround your answer for that data point with a <LOW CONFIDENCE> XML tag.
-            Examine each handwritten digit very carefully, looking at the overall stroke pattern and shape. If the digit could be interpreted as two or more different numeric values, surround the data point that contains it with a <LOW_CONFIDENCE REASON:> XML tag and write the reason in the tag.
-            Additionally, look at the format of the overall form, and if you see handwriting that is not neat or is not printed within the form boxes, surround your whole answer with a <LOW_CONFIDENCE REASON:> XML tag and write the reason in the tag."""})
+            If the question requires you to read any numeric data points, Examine each handwritten digit very carefully, looking at the overall stroke pattern and shape. If the digit could be interpreted as two or more different numeric values, surround the data point that contains it with a <LOW_CONFIDENCE REASON:> XML tag and write the reason in the tag.
+            Additionally, look at the format of the overall form, and if you see handwriting that is not neat or is not printed within the form boxes, surround your whole answer with a <LOW_CONFIDENCE REASON:> XML tag and write the reason in the tag.
+            If any pages of the document appear to be rotated, then instead of writing an answer, write an <ORIENTATION ERROR> tag and inside it write the rotated page number, and how many degrees clockwise it appears to be rotated from an upright position.
+            If these document images do not contain the answer to the question, then wrie an <INFORMATION NOT FOUND> XML tag with an explanation any data you found that looked the most relevant to the question."""})
 
     messages = [{"role": "user", "content": encoded_messages}]
 
