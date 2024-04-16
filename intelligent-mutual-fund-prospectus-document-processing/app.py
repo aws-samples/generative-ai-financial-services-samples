@@ -17,10 +17,14 @@ from utils.utils_text import (
     spans_of_tokens_all,
     text_tokenizer,
 )
+from utils.utils_os import (
+    read_json, 
+    read_jsonl
+)
 
 
 # Set page title
-st.set_page_config(page_title="FSI Insurance Q/A App", layout="wide")
+st.set_page_config(page_title="FSI Q/A App", layout="wide")
 
 # Remove whitespace from the top of the page and sidebar
 st.write('<style>div.block-container{padding-top:2rem;}</style>', unsafe_allow_html=True)
@@ -167,7 +171,7 @@ def main():
     # Ensure the environment is set up correctly
     check_env()
 
-    st.title("Intelligent Document Processing for FSI Insurance.")
+    st.title("Intelligent Document Processing for FSI.")
 
     # Select a language model from the available options
 
@@ -177,7 +181,7 @@ def main():
     if "claude3direct" not in st.session_state:
         st.session_state.claude3direct = False
     
-    col1, col2 = st.columns([2.2, 2.0])
+    col1, col2, col3 = st.columns([2.0, 2.2, 2.0])
     with col1:
         # Select OCR Tool
         st.session_state.ocr_tool = st.selectbox("Select OCR Tool", ["Textract", "Claude 3 Vision"])
@@ -191,19 +195,44 @@ def main():
 
         # Update session state variables
         st.session_state.modelID = model_id
+
+    with col3: 
+        demo_version = st.selectbox("Select Examples Version", ["Insurance Examples", "Mutual Fund Examples"])
+
+        if demo_version == "Insurance Examples":
+            document_repo_file_path = './docs/insurance/'
+        elif demo_version == "Mutual Fund Examples":
+            document_repo_file_path = './docs/mutual_fund/'
+        
+        questions = read_json(document_repo_file_path + 'questions.json')
+        questions = ["Ask your question"] + list(questions.values())
+        questions = [f"{i}. {q}" for i, q in enumerate(questions)]
         
     col1, col2 = st.columns([2.2, 2.0])
     # Define doc_source_nm early on to ensure it's available when needed
     with col1:  # Right side - Only the full PDF display
-        listdocs = os.listdir('./docs/mutual_fund/')
-        relative_paths = [os.path.join('./docs/mutual_fund/', file) for file in listdocs]
+        listdocs = os.listdir(document_repo_file_path)
+        relative_paths = [os.path.join(document_repo_file_path, file) for file in listdocs]
 
         pdf_docs = [doc for doc in relative_paths if doc.endswith(".pdf")]
 
-        doc_path = st.selectbox("Select doc", pdf_docs, key="pdf_selector")
+        doc_path = st.selectbox("Select doc", pdf_docs, key="pdf_selector", index=0)
 
+        if doc_path.lower().endswith(".pdf"):
+            displayPDF(doc_path)
+            
+
+    with col2:  # Left side - All settings and displays except the full PDF
+        # Select a language model from the available options
+        with st.expander('Architecture Diagram', expanded=True): 
+            if st.session_state.ocr_tool == 'Claude 3 Vision':
+                st.image("./assets/claude_3_direct_diagram.png", use_column_width=True)
+            else: 
+                st.image("./assets/textract_diagram.png", use_column_width=True)
+
+        
         # Handling user input for the question
-        question = st.selectbox("Select question", [""] + list_questions(), )
+        question = st.selectbox("Select question", [""] + questions, )
         question = clean_question(question)
 
         # Allow user to input a custom question if needed
@@ -219,11 +248,10 @@ def main():
         # Construct the query by appending a trailer for concise answers
         query = question
         query = query.strip()
-        print("Q:", query)
 
         # Display the formatted question
         st.write("**Question**")
-        st.text_area(
+        final_query = st.text_area(
             label="Preview",
             value=query,
             label_visibility="collapsed",
@@ -231,36 +259,27 @@ def main():
             disabled=False,
             max_chars=1000,
         )
-
-        if doc_path.lower().endswith(".pdf"):
-            displayPDF(doc_path)
-            
-
-    with col2:  # Left side - All settings and displays except the full PDF
-        # Select a language model from the available options
-        with st.expander('Architecture Diagram', expanded=True): 
-            if st.session_state.ocr_tool == 'Claude 3 Vision':
-                st.image("./assets/claude_3_direct_diagram.png", use_column_width=True)
-            else: 
-                st.image("./assets/textract_diagram.png", use_column_width=True)
+        print("Q:", final_query)
 
 
         # code for processing the query and handling responses
         if st.session_state.ocr_tool == "Claude 3 Vision":
             print("Passing images to Claude 3 directly")
-            response = search_and_answer_claude_3_direct(
-                file_path=doc_path,
-                query=query,
-            )
+            with st.spinner("Processing pdf with Claude 3 Vision & querying bedrock"):
+                response = search_and_answer_claude_3_direct(
+                    file_path=doc_path,
+                    query=final_query,
+                    )
             st.write(f"**Answer**: :blue[{response}]")
         else:
             K = 1
             for attempt in range(4):
                 try:
-                    answer, all_text = search_and_answer_textract(
-                        file_path=doc_path,
-                        query=query,
-                    )
+                    with st.spinner("Processing pdf with Textract & querying bedrock"):
+                        answer, all_text = search_and_answer_textract(
+                            file_path=doc_path,
+                            query=final_query,
+                            )
                     break  # Success
                 except Exception as e:
                     print(e)
