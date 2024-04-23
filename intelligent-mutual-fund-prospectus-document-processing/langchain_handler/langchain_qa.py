@@ -7,11 +7,11 @@ from langchain_community.docstore import InMemoryDocstore
 from langchain.vectorstores.opensearch_vector_search import OpenSearchVectorSearch
 from langchain_handler.langchain_bedrock_wrappers import BedrockCached
 import base64
-from pdf2image import convert_from_path
 from io import BytesIO 
 import json
 from textractor import Textractor
 import os
+import pypdfium2 as pdfium
 
 # Ensure that the Python version is compatible with the requirements
 def validate_environment():
@@ -74,12 +74,29 @@ def amazon_bedrock_llm(model_id, verbose=False):
 
 # Function to perform search and answer using the pdfs loaded into memory
 # as base64 encodings of the pdfs -> images then sent to claude 3 directly
-def search_and_answer_claude_3_direct(file_path, query, img_format="png"):
-    images = convert_from_path(file_path, fmt=img_format, dpi=100)
+def search_and_answer_claude_3_direct(file_path, query):
+    pdf = pdfium.PdfDocument(file_path)
+    images = []
+    for page_index in range(len(pdf)):
+        page = pdf[page_index]
+        bitmap = page.render(
+            scale=2.0,  # Increase the scale for higher resolution
+            rotation=0,
+            crop=(0, 0, 0, 0),  # No cropping
+            may_draw_forms=True,
+            bitmap_maker=pdfium.PdfBitmap.new_native,  # Use native bitmap format
+            color_scheme=None,  # Use default color scheme
+            fill_to_stroke=False,
+            rev_byteorder=False,  # Use default byte order
+            prefer_bgrx=False,  # Use default pixel format
+            force_bitmap_format=None  # Use automatic pixel format selection
+        )
+        images.append(bitmap)
     encoded_messages = []
     for i in range(len(images)):
         buffered = BytesIO()
-        images[i].save(buffered, format=images[i].format)
+        pil_image = images[i].to_pil()
+        pil_image.save(buffered, format='PNG')
         img_byte = buffered.getvalue()
         img_base64 = base64.b64encode(img_byte)
         img_base64_str = img_base64.decode('utf-8')
@@ -102,7 +119,8 @@ def search_and_answer_claude_3_direct(file_path, query, img_format="png"):
             If the question requires you to read any numeric data points, Examine each handwritten digit very carefully, looking at the overall stroke pattern and shape. If the digit could be interpreted as two or more different numeric values, surround the data point that contains it with a <LOW_CONFIDENCE REASON:> XML tag and write the reason in the tag.
             Additionally, look at the format of the overall form, and if you see handwriting that is not neat or is not printed within the form boxes, surround your whole answer with a <LOW_CONFIDENCE REASON:> XML tag and write the reason in the tag.
             If any pages of the document appear to be rotated, then instead of writing an answer, write an <ORIENTATION ERROR> tag and inside it write the rotated page number, and how many degrees clockwise it appears to be rotated from an upright position.
-            If these document images do not contain the answer to the question, then wrie an <INFORMATION NOT FOUND> XML tag with an explanation any data you found that looked the most relevant to the question."""})
+            If the data the question asks for is not in the data tag then say I don't know and give an explanation why. 
+            Don't format your answer as XML and don't restate the question."""})
 
     messages = [{"role": "user", "content": encoded_messages}]
 
@@ -146,9 +164,14 @@ def search_and_answer_textract(file_path, query):
     # Prepare the input for Bedrock runtime
     messages = [
         {"role": "user", "content": [
-            {"type": "text", "text": all_text}, 
             {"type": "text", "text": f"""You are a data entry specialist and expert forensic document examiner.
-            {query}"""}]}
+            Please answer the use question in the <QUESTION> XML tag, using only information in the <DATA> tag.
+            <DATA>{all_text}</DATA>
+            <QUESTION>
+            {query}
+            <QUESTION>
+            If the data the question asks for is not in the data tag then say I don't know and give an explanation why. 
+            Don't format your answer as XML and don't restate the question."""}]}
     ]
 
     # Send the input to Bedrock runtime

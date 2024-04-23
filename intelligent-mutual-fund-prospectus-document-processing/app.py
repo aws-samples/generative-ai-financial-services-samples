@@ -22,6 +22,10 @@ from utils.utils_os import (
     read_jsonl
 )
 
+# check if an env variable called BUCKET_NAME is existing
+# if yes, continue, else error out and say "S3 Bucket must be set for Textract processing. Please see README for more information"
+if "BUCKET_NAME" not in os.environ:
+    raise Exception("S3 Bucket must be set for Textract processing. Please see README for more information")
 
 # Set page title
 st.set_page_config(page_title="FSI Q/A App", layout="wide")

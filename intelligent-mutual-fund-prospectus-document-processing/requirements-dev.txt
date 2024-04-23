@@ -11,4 +11,4 @@ python-dotenv==1.0.0
 black==23.12.1
 bandit==1.7.6
 PyYAML==6.0.1
-pdf2image==1.17.0
+pypdfium2==4.29.0
