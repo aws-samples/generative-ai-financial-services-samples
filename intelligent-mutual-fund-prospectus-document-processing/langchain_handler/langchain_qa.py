@@ -57,6 +57,13 @@ def amazon_bedrock_models():
         "amazon.titan-tg1-large": {"temperature": 0.0, "maxTokenCount": 300},
     }
 
+def get_tag_text(text, tag_name):
+    pattern = fr"<{tag_name}>(.*?)</{tag_name}>"
+    match = re.search(pattern, text, re.DOTALL)
+    if match:
+        return match.group(1)
+    else:
+        return None
 
 # Function to create a cached Bedrock LLM instance
 def amazon_bedrock_llm(model_id, verbose=False):
@@ -75,6 +82,11 @@ def amazon_bedrock_llm(model_id, verbose=False):
 # Function to perform search and answer using the pdfs loaded into memory
 # as base64 encodings of the pdfs -> images then sent to claude 3 directly
 def search_and_answer_claude_3_direct(file_path, query):
+    ANSWER_TAG = "ANSWER"
+    GROUND_TRUTH_TAG = "GROUND"
+    QUESTION_TAG = "QUESTION"
+    DATA_TAG = "DATA"
+
     pdf = pdfium.PdfDocument(file_path)
     images = []
     for page_index in range(len(pdf)):
@@ -108,19 +120,21 @@ def search_and_answer_claude_3_direct(file_path, query):
             "data": img_base64_str
         }})
         
-        # append the question to the end
-        encoded_messages.append({"type": "text", "text": f"""You are a data entry specialist and expert forensic document examiner.
-            Please answer the use question in the <QUESTION> XML tag, using only information in these images.
-            <QUESTION>
-            {query}
-            <QUESTION>
-            If the question requires you to read any numeric data points, read each digit one at a time, and append each to the resulting data point string.
-            If the writing in a form field is hard to read, or has corrections, or overflows onto the margin, then surround your answer for that data point with a <LOW CONFIDENCE> XML tag.
-            If the question requires you to read any numeric data points, Examine each handwritten digit very carefully, looking at the overall stroke pattern and shape. If the digit could be interpreted as two or more different numeric values, surround the data point that contains it with a <LOW_CONFIDENCE REASON:> XML tag and write the reason in the tag.
-            Additionally, look at the format of the overall form, and if you see handwriting that is not neat or is not printed within the form boxes, surround your whole answer with a <LOW_CONFIDENCE REASON:> XML tag and write the reason in the tag.
-            If any pages of the document appear to be rotated, then instead of writing an answer, write an <ORIENTATION ERROR> tag and inside it write the rotated page number, and how many degrees clockwise it appears to be rotated from an upright position.
-            If the data the question asks for is not in the data tag then say I don't know and give an explanation why. 
-            Don't format your answer as XML and don't restate the question."""})
+        # append the question to the beginning 
+        encoded_messages.insert(0, {"type": "text", "text": f"""You are a data entry specialist and expert forensic document examiner.
+                Please answer the use question in the <{QUESTION_TAG}> XML tag, using only information in the data below. 
+                Please give the answer in the <{ANSWER_TAG}> XML tag. Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
+                If the data the question asks for is not in the data tag then say I don't know and give an explanation why. Leave the ground truth empty if you don't know. 
+
+                <{QUESTION_TAG}>
+                {query}
+                </{QUESTION_TAG}>
+
+                <{DATA_TAG}>
+                """})
+        
+        #append closing tags to the data
+        encoded_messages.append({"type": "text", "text": f"</{DATA_TAG}>"})
 
     messages = [{"role": "user", "content": encoded_messages}]
 
@@ -128,9 +142,31 @@ def search_and_answer_claude_3_direct(file_path, query):
     body = {"messages": messages, "max_tokens": 1000, "temperature": 0, "anthropic_version":"", "top_k": 250, "top_p": 1, "stop_sequences": ["User"]}
     response = bedrock_rt.invoke_model(modelId="anthropic.claude-3-sonnet-20240229-v1:0", body=json.dumps(body))
     text_resp = json.loads(response['body'].read().decode('utf-8'))
-    return text_resp['content'][0]['text']
+    full_string_text_response = text_resp['content'][0]['text']
+
+    print(full_string_text_response)
+
+    # get the answer from the response
+    answer = get_tag_text(full_string_text_response, ANSWER_TAG)
+
+    #get the ground truth from the response
+    ground_truth = get_tag_text(full_string_text_response, GROUND_TRUTH_TAG)
+
+    #get the text from the s3 bucket
+    s3 = boto3.client('s3')
+    bucket_name = os.environ['BUCKET_NAME']
+    s3_key = os.path.basename(file_path)  # Get the file name from the file path
+    txt_file_key = f"{s3_key}.txt"  # Text file name with the same base name as the input file
+    obj = s3.get_object(Bucket=bucket_name, Key=f"genai-demo/{txt_file_key}")
+    all_text = obj['Body'].read().decode('utf-8')
+
+    return answer, ground_truth, all_text
 
 def search_and_answer_textract(file_path, query):
+    ANSWER_TAG = "ANSWER"
+    GROUND_TRUTH_TAG = "GROUND"
+    QUESTION_TAG = "QUESTION"
+    DATA_TAG = "DATA"
     s3 = boto3.client('s3')
     extractor = Textractor(profile_name="default")
     # Read from os env var called BUCKET_NAME and put in a var called "bucket_name"
@@ -165,13 +201,18 @@ def search_and_answer_textract(file_path, query):
     messages = [
         {"role": "user", "content": [
             {"type": "text", "text": f"""You are a data entry specialist and expert forensic document examiner.
-            Please answer the use question in the <QUESTION> XML tag, using only information in the <DATA> tag.
-            <DATA>{all_text}</DATA>
-            <QUESTION>
-            {query}
-            <QUESTION>
-            If the data the question asks for is not in the data tag then say I don't know and give an explanation why. 
-            Don't format your answer as XML and don't restate the question."""}]}
+                Please answer the use question in the <{QUESTION_TAG}> XML tag, using only information in the data below. 
+                Please give the answer in the <{ANSWER_TAG}> XML tag. Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
+                If the data the question asks for is not in the data tag then say I don't know and give an explanation why. Leave the ground truth empty if you don't know. 
+
+                <{QUESTION_TAG}>
+                {query}
+                </{QUESTION_TAG}>
+
+                <{DATA_TAG}>
+                {all_text}
+                </{DATA_TAG}>
+                """}]}
     ]
 
     # Send the input to Bedrock runtime
@@ -179,5 +220,12 @@ def search_and_answer_textract(file_path, query):
     body = {"messages": messages, "max_tokens": 1000, "temperature": 0, "anthropic_version":"", "top_k": 250, "top_p": 1, "stop_sequences": ["User"]}
     response = bedrock_rt.invoke_model(modelId="anthropic.claude-3-sonnet-20240229-v1:0", body=json.dumps(body))
     text_resp = json.loads(response['body'].read().decode('utf-8'))
+    full_string_text_response = text_resp['content'][0]['text']
 
-    return text_resp['content'][0]['text'], all_text
+    # get the answer from the response
+    answer = get_tag_text(full_string_text_response, ANSWER_TAG)
+
+    #get the ground truth from the response
+    ground_truth = get_tag_text(full_string_text_response, GROUND_TRUTH_TAG)
+
+    return answer, ground_truth, all_text

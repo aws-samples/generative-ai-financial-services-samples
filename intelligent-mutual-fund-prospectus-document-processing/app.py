@@ -21,6 +21,9 @@ from utils.utils_os import (
     read_json, 
     read_jsonl
 )
+import boto3
+import io
+from contextlib import closing
 
 # check if an env variable called BUCKET_NAME is existing
 # if yes, continue, else error out and say "S3 Bucket must be set for Textract processing. Please see README for more information"
@@ -29,6 +32,21 @@ if "BUCKET_NAME" not in os.environ:
 
 # Set page title
 st.set_page_config(page_title="FSI Q/A App", layout="wide")
+
+def synthesize_speech(text, voice_id):
+    polly_client = boto3.Session().client('polly')
+    response = polly_client.synthesize_speech(
+        Text=text,
+        OutputFormat='mp3',
+        VoiceId=voice_id
+    )
+
+    stream = response.get('AudioStream')
+    mp3_data = io.BytesIO()
+    with closing(stream):
+        mp3_data.write(stream.read())
+
+    return mp3_data.getvalue()
 
 # Remove whitespace from the top of the page and sidebar
 st.write('<style>div.block-container{padding-top:2rem;}</style>', unsafe_allow_html=True)
@@ -46,11 +64,6 @@ content_css = """
 # Inject CSS with Markdown
 st.markdown(content_css, unsafe_allow_html=True)
 
-# Load configuration from a YAML file
-with open("config.yml", "r") as file:
-    config = yaml.safe_load(file)
-
-
 # Define Streamlit cache decorators for various functions
 # These decorators help in caching the output of functions to enhance performance
 @st.cache_resource
@@ -58,48 +71,38 @@ def check_env():
     # Validate the environment for the langchain QA model
     validate_environment()
 
-
 @st.cache_data
 def list_llm_models():
     models = list(amazon_bedrock_models().keys())
     return models
 
-@st.cache_data
-def load_datapoint_master():
-    return load_labels_master(config["datapoint_master"])
-
-
-@st.cache_data
-def list_questions():
-    questions = load_datapoint_master()
-    questions = ["Ask your question"] + list(questions.values())
-    return [f"{i}. {q}" for i, q in enumerate(questions)]
-
-
 def clean_question(s):
     """Strip heading question number"""
     return re.sub(r"^[\d\.\s]+", "", s)
 
-
-@st.cache_data
-def list_groundtruth(doc_path, question):
-    # Find datapoint name
-    datapoints = load_datapoint_master()
-    # Find Ground Truth for that datapoint for that pdf
-    iter_ = (k for k, q in datapoints.items() if q == question)
-    datapoint = next(iter_, None)
-    ground_truth = load_labels(doc_path, config["datapoint_labels"]).get(
-        datapoint, None
-    )
-    return datapoint, ground_truth
-
-
 def markdown_bgcolor(text, bg_color):
     return f'<span style="background-color:{bg_color};">{text}</span>'
 
-
 def markdown_fgcolor(text, fg_color):
     return f":{fg_color}[{text}]"
+
+# Function to save the uploaded file
+def save_uploaded_file(uploaded_file, upload_dir):
+    try:
+        # Get the file extension
+        file_extension = os.path.splitext(uploaded_file.name)[1]
+        
+        # Check if the file is a PDF
+        if file_extension.lower() == ".pdf":
+            # Save the file to the specified directory
+            file_path = os.path.join(upload_dir, uploaded_file.name)
+            with open(file_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            st.success(f"File '{uploaded_file.name}' uploaded successfully!")
+        else:
+            st.error("Only PDF files are allowed.")
+    except Exception as e:
+        st.error(f"Error uploading file: {e}")
 
 
 def markdown_naive(text, tokens, bg_color=None):
@@ -222,6 +225,10 @@ def main():
 
         doc_path = st.selectbox("Select doc", pdf_docs, key="pdf_selector", index=0)
 
+        uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
+        if uploaded_file is not None:
+            save_uploaded_file(uploaded_file, upload_dir=document_repo_file_path)
+
         if doc_path.lower().endswith(".pdf"):
             displayPDF(doc_path)
             
@@ -270,7 +277,7 @@ def main():
         if st.session_state.ocr_tool == "Claude 3 Vision":
             print("Passing images to Claude 3 directly")
             with st.spinner("Processing PDF with Claude 3 Vision"):
-                response = search_and_answer_claude_3_direct(
+                response, ground_truth, all_text = search_and_answer_claude_3_direct(
                     file_path=doc_path,
                     query=final_query,
                     )
@@ -280,7 +287,7 @@ def main():
             for attempt in range(4):
                 try:
                     with st.spinner("Processing PDF with Textract"):
-                        answer, all_text = search_and_answer_textract(
+                        response, ground_truth, all_text = search_and_answer_textract(
                             file_path=doc_path,
                             query=final_query,
                             )
@@ -297,48 +304,53 @@ def main():
                         # continue
                         raise e
 
-            print(answer)
+            print(response)
 
             # Display the answer to the user
-            if "Helpful Answer:" in answer:
-                answer = answer.split("Helpful Answer:")[1]
+            if "Helpful Answer:" in response:
+                response = response.split("Helpful Answer:")[1]
 
             # need a double-whitespace before \n to get a newline
             # multiple questions at once
-            if "\n" in answer:
+            if "\n" in response:
                 print("Split answer by newline")
                 st.write("**Answer**")
-                for line in answer.split("\n"):
+                for line in response.split("\n"):
                     st.text(line)
             else:
-                st.write(f"**Answer**: :blue[{answer}]")
+                st.write(f"**Answer**: :blue[{response}]")
 
-            # Load and display ground truth if available
-            dp, gt = list_groundtruth(doc_path, question)
-            if gt:
-                st.markdown(
-                    "**Ground truth**: " + markdown_bgcolor(gt, "yellow"),
-                    unsafe_allow_html=True,
-                )
-            else:
-                st.write("**Ground truth**: Not available")
+        # Create a play button for Amazon Polly
+        with st.spinner("Processing Amazon Polly voice response from Claude 3"):
+            voice_id = 'Matthew'  # You can choose a different voice ID if desired
+            audio_data = synthesize_speech(response, voice_id)
+            st.audio(audio_data, format='audio/mp3')
 
-            # Highlight and display evidence in the source documents
-            tokens_answer = text_tokenizer(answer)
-            tokens_labels = text_tokenizer(f"{gt}") if gt else []
-            tokens_miss = set(tokens_labels).difference(tokens_answer)
+        # Load and display ground truth if available
+        if ground_truth:
+            st.markdown(
+                "**Ground truth**: " + markdown_bgcolor(ground_truth, "yellow"),
+                unsafe_allow_html=True,
+            )
+        else:
+            st.write("**Ground truth**: Not available")
 
-            # ... [code for marking and displaying the document content]
-            st.divider()
+        # Highlight and display evidence in the source documents
+        tokens_answer = text_tokenizer(ground_truth)
+        tokens_labels = text_tokenizer(f"{ground_truth}") if ground_truth else []
+        tokens_miss = set(tokens_labels).difference(tokens_answer)
 
-            markd = markdown_escape(all_text)
+        # ... [code for marking and displaying the document content]
+        st.divider()
 
-            markd = markdown2(text=markd, tokens=tokens_answer, bg_color="#90EE90")
-            markd = markdown2(text=markd, tokens=tokens_miss, bg_color="red")
+        markd = markdown_escape(all_text)
 
-            print("done")
+        markd = markdown2(text=markd, tokens=tokens_answer, bg_color="#90EE90")
+        markd = markdown2(text=markd, tokens=tokens_miss, bg_color="red")
 
-            st.markdown(markd, unsafe_allow_html=True)
+        print("done")
+
+        st.markdown(markd, unsafe_allow_html=True)
 
 # Call the main function to run the app
 main()

@@ -15,7 +15,7 @@ Welcome to our state-of-the-art Intelligent Mutual Fund Prospectus Document Proc
 
 # Project Diagram 📊 
 
-![Project Diagram](assets/diagram.png)
+![Project Diagram](assets/claude_3_vision_diagram.png)
 
 # Run Locally 💻
 
@@ -27,19 +27,6 @@ This repository beautifully marries the capabilities of:
 3. **Bedrock**: Crafting complex ML structures with ease.
 
 ## Pre-Requisites
-### Poppler
-Poppler is an underlying project to convert PDF to images, that'll be sent to Claude 3 vision (multi-modal)
-
-To install Poppler, follow the instructions below:
-
-- Ubuntu
-`sudo apt-get install poppler-utils`
-
-- Archlinux
-`sudo pacman -S poppler`
-
-- MacOS
-`brew install poppler`
 
 ### S3 Bucket
 
@@ -56,9 +43,6 @@ Then you can set env. var as:
 export BUCKET_NAME=$BUCKET_NAME
 ```
 
-
-
-
 ## Install
 
 ```bash
@@ -70,7 +54,6 @@ conda activate financialqaenv
 pip install --upgrade pip
 pip install --upgrade -r requirements.txt
 ```
-
 
 
 ## Run
