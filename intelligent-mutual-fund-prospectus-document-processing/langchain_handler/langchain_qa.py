@@ -10,6 +10,8 @@ import base64
 from io import BytesIO 
 import json
 from textractor import Textractor
+from textractor.data.constants import TextractFeatures
+from textractor.data.text_linearization_config import TextLinearizationConfig
 import os
 import pypdfium2 as pdfium
 
@@ -183,11 +185,28 @@ def search_and_answer_textract(file_path, query):
         all_text = obj['Body'].read().decode('utf-8')
     except:
         print(f"Text file {txt_file_key} does not exist in bucket {bucket_name}. Processing and uploading.")
-        document = extractor.start_document_text_detection(
-            file_path,
-            s3_upload_path=f"s3://{bucket_name}/genai-demo/{s3_key}",
+        config = TextLinearizationConfig(
+            hide_figure_layout=True,
+            title_prefix="<titles><<title>><title>",
+            title_suffix="</title><</title>>",
+            hide_header_layout=True,
+            section_header_prefix="<headers><<header>><header>",
+            section_header_suffix="</header><</header>>",
+            table_prefix="<tables><table>",
+            table_suffix="</table>",
+            list_layout_prefix="<<list>><list>",
+            list_layout_suffix="</list><</list>>",
+            hide_footer_layout=True,
+            hide_page_num_layout=True,
         )
-        all_text = document.get_text().replace('\n\n', '\n')  # Replace double newlines with single newline
+
+        document = extractor.start_document_analysis(
+            file_source=file_path, 
+            features=[TextractFeatures.LAYOUT, TextractFeatures.TABLES],
+            s3_upload_path=f"s3://{bucket_name}/genai-demo/{s3_key}",
+            save_image=f'/textract-processed/{file_path}'
+        )
+        all_text = document.get_text(config=config)  # Replace double newlines with single newline
         all_text = ' '.join(all_text.split())  # Remove extra whitespace
 
         # Upload the all_text to a text file in S3
@@ -203,6 +222,7 @@ def search_and_answer_textract(file_path, query):
             {"type": "text", "text": f"""You are a data entry specialist and expert forensic document examiner.
                 Please answer the use question in the <{QUESTION_TAG}> XML tag, using only information in the data below. 
                 Please give the answer in the <{ANSWER_TAG}> XML tag. Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
+                Please format your response as markdown within the <{ANSWER_TAG}> and <{GROUND_TRUTH_TAG}.
                 If the data the question asks for is not in the data tag then say I don't know and give an explanation why. Leave the ground truth empty if you don't know. 
 
                 <{QUESTION_TAG}>

@@ -168,6 +168,7 @@ To make the most out of our project, familiarize yourself with these key compone
 - [Max Winter](https://www.linkedin.com/in/maxwinter/)
 - [Rubén Afonso](https://www.linkedin.com/in/rubenafonso/)
 - [Samuel Baruffi](https://www.linkedin.com/in/samuelbaruffi/)
+- [Liam Knowles](https://www.linkedin.com/in/liam-knowles)
 
 # Contributors
 

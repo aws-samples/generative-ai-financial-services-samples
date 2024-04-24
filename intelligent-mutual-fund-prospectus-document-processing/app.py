@@ -281,44 +281,16 @@ def main():
                     file_path=doc_path,
                     query=final_query,
                     )
-            st.write(f"**Answer**: :blue[{response}]")
         else:
-            K = 1
-            for attempt in range(4):
-                try:
-                    with st.spinner("Processing PDF with Textract"):
-                        response, ground_truth, all_text = search_and_answer_textract(
-                            file_path=doc_path,
-                            query=final_query,
-                            )
-                    break  # Success
-                except Exception as e:
-                    print(e)
-                    st.spinner(text=type(e).__name__)
-                    if type(e).__name__ == "ValidationException" and K > 1:
-                        print("Retrying using shorter context")
-                        K -= 1
-                    elif type(e).__name__ == "ThrottlingException":
-                        print("Retrying")
-                    else:
-                        # continue
-                        raise e
+            with st.spinner("Processing PDF with Textract"):
+                response, ground_truth, all_text = search_and_answer_textract(
+                    file_path=doc_path,
+                    query=final_query,
+                )
 
-            print(response)
+        print(response)
 
-            # Display the answer to the user
-            if "Helpful Answer:" in response:
-                response = response.split("Helpful Answer:")[1]
-
-            # need a double-whitespace before \n to get a newline
-            # multiple questions at once
-            if "\n" in response:
-                print("Split answer by newline")
-                st.write("**Answer**")
-                for line in response.split("\n"):
-                    st.text(line)
-            else:
-                st.write(f"**Answer**: :blue[{response}]")
+        st.write(f"**Answer**: {response}")
 
         # Create a play button for Amazon Polly
         with st.spinner("Processing Amazon Polly voice response from Claude 3"):
