@@ -1,4 +1,5 @@
 import os
+from botocore.exceptions import ClientError
 import streamlit as st
 import yaml
 import re
@@ -47,6 +48,79 @@ def synthesize_speech(text, voice_id):
         mp3_data.write(stream.read())
 
     return mp3_data.getvalue()
+
+comprehend = boto3.client('comprehend')
+
+def analyze_sentiment(text):
+    try:
+        response = comprehend.detect_sentiment(Text=text, LanguageCode='en')
+        sentiment = response['Sentiment']
+        sentiment_score = response['SentimentScore']
+        return sentiment, sentiment_score
+    except Exception as e:
+        print(f"Error: {e}")
+        return None, None
+    
+def detect_pii_entities(text):
+    try:
+        response = comprehend.detect_pii_entities(Text=text, LanguageCode='en')
+        entities = response.get('Entities', [])
+        entity_texts = [
+            f"- {entity['Type']}: {format_entity_text(entity, text)}"
+            for entity in entities
+        ]
+        return entity_texts
+    except ClientError as e:
+        print(f"Error: {e}")
+        return []
+    
+entity_colors = {
+    'DEFAULT': {'color': '#e0e0e0', 'country': 'universal', 'emoji': '🌍'},
+    'BANK_ACCOUNT_NUMBER': {'color': '#ff9999', 'country': 'US', 'emoji': '💳'},
+    'CREDIT_DEBIT_NUMBER': {'color': '#ffcdd2', 'country': 'universal', 'emoji': '💳'},
+    'ADDRESS': {'color': '#e0e0e0', 'country': 'universal', 'emoji': '🏠'},
+    'AGE': {'color': '#f3e5f5', 'country': 'universal', 'emoji': '🕰️'},
+    'AWS_ACCESS_KEY': {'color': '#b2dfdb', 'country': 'universal', 'emoji': '🔑'},
+    'AWS_SECRET_KEY': {'color': '#b2dfdb', 'country': 'universal', 'emoji': '🔑'},
+    'CREDIT_DEBIT_CVV': {'color': '#e1bee7', 'country': 'universal', 'emoji': '💳'},
+    'CREDIT_DEBIT_EXPIRY': {'color': '#e1bee7', 'country': 'universal', 'emoji': '💳'},
+    'DATE_TIME': {'color': '#c8e6c9', 'country': 'universal', 'emoji': '📅'},
+    'DRIVER_ID': {'color': '#ffcdd2', 'country': 'universal', 'emoji': '🚗'},
+    'EMAIL': {'color': '#b3e5fc', 'country': 'universal', 'emoji': '📧'},
+    'INTERNATIONAL_BANK_ACCOUNT_NUMBER': {'color': '#ff9999', 'country': 'international', 'emoji': '💳'},
+    'IP_ADDRESS': {'color': '#b2dfdb', 'country': 'universal', 'emoji': '🌐'},
+    'LICENSE_PLATE': {'color': '#ffcdd2', 'country': 'universal', 'emoji': '🚗'},
+    'MAC_ADDRESS': {'color': '#b2dfdb', 'country': 'universal', 'emoji': '🖥️'},
+    'NAME': {'color': '#f3e5f5', 'country': 'universal', 'emoji': '👤'},
+    'PASSWORD': {'color': '#e1bee7', 'country': 'universal', 'emoji': '🔒'},
+    'PHONE': {'color': '#c8e6c9', 'country': 'universal', 'emoji': '📞'},
+    'PIN': {'color': '#e1bee7', 'country': 'universal', 'emoji': '🔢'},
+    'SWIFT_CODE': {'color': '#ff9999', 'country': 'universal', 'emoji': '💳'},
+    'URL': {'color': '#b3e5fc', 'country': 'universal', 'emoji': '🌐'},
+    'USERNAME': {'color': '#b3e5fc', 'country': 'universal', 'emoji': '👤'},
+    'VEHICLE_IDENTIFICATION_NUMBER': {'color': '#ffcdd2', 'country': 'universal', 'emoji': '🚗'},
+    'CA_HEALTH_NUMBER': {'color': '#ff9999', 'country': 'CA', 'emoji': '🏥'},
+    'CA_SOCIAL_INSURANCE_NUMBER': {'color': '#ff9999', 'country': 'CA', 'emoji': '🏦'},
+    'IN_AADHAAR': {'color': '#ff9999', 'country': 'IN', 'emoji': '🇮🇳'},
+    'IN_NREGA': {'color': '#ff9999', 'country': 'IN', 'emoji': '🇮🇳'},
+    'IN_PERMANENT_ACCOUNT_NUMBER': {'color': '#ff9999', 'country': 'IN', 'emoji': '🇮🇳'},
+    'IN_VOTER_NUMBER': {'color': '#ff9999', 'country': 'IN', 'emoji': '🇮🇳'},
+    'UK_NATIONAL_HEALTH_SERVICE_NUMBER': {'color': '#ff9999', 'country': 'UK', 'emoji': '🇬🇧'},
+    'UK_NATIONAL_INSURANCE_NUMBER': {'color': '#ff9999', 'country': 'UK', 'emoji': '🇬🇧'},
+    'UK_UNIQUE_TAXPAYER_REFERENCE_NUMBER': {'color': '#ff9999', 'country': 'UK', 'emoji': '🇬🇧'},
+    'BANK_ROUTING': {'color': '#ff9999', 'country': 'US', 'emoji': '💳'},
+    'PASSPORT_NUMBER': {'color': '#ffcdd2', 'country': 'US', 'emoji': '🇺🇸'},
+    'US_INDIVIDUAL_TAX_IDENTIFICATION_NUMBER': {'color': '#ff9999', 'country': 'US', 'emoji': '🇺🇸'},
+    'SSN': {'color': '#ff9999', 'country': 'US', 'emoji': '🇺🇸'}
+}
+
+def format_entity_text(entity, text):
+    entity_type = entity['Type']
+    entity_text = text[entity['BeginOffset']:entity['EndOffset']]
+    color = entity_colors[entity_type]['color']
+    emoji = entity_colors[entity_type]['emoji']
+    country = entity_colors[entity_type]['country']
+    return f"<span style='background-color:{color};'>{country} - {emoji} - {entity_text}</span>"
 
 # Remove whitespace from the top of the page and sidebar
 st.write('<style>div.block-container{padding-top:2rem;}</style>', unsafe_allow_html=True)
@@ -272,6 +346,32 @@ def main():
         )
         print("Q:", final_query)
 
+        if st.button("Analyze Sentiment - Amazon Comprehend"):
+            # Analyze sentiment of the question
+            with st.spinner("Generating Question Sentiment with Amazon Comprehend"):
+                sentiment, sentiment_score = analyze_sentiment(final_query)
+
+            # Display sentiment analysis results
+            if sentiment is not None and sentiment_score is not None:
+                st.metric(label="Sentiment", value=sentiment, delta=None)
+                # Display sentiment scores using st.metric
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric(label="Positive", value=sentiment_score.get('Positive', 0.0))
+                with col2:
+                    st.metric(label="Negative", value=sentiment_score.get('Negative', 0.0))
+                with col3:
+                    st.metric(label="Neutral", value=sentiment_score.get('Neutral', 0.0))
+
+        if st.button("Analyze PII - Amazon Comprehend"):
+            with st.spinner("Detecting PII entities with Amazon Comprehend"):
+                pii_entities = detect_pii_entities(final_query)
+
+            if pii_entities:
+                for entity in pii_entities:
+                    st.write(entity, unsafe_allow_html=True)
+            else:
+                st.info("No PII entities detected.")
 
         # code for processing the query and handling responses
         if st.session_state.ocr_tool == "Claude 3 Vision":
@@ -282,7 +382,7 @@ def main():
                     query=final_query,
                     )
         else:
-            with st.spinner("Processing PDF with Textract"):
+            with st.spinner("Processing PDF with Amazon Textract"):
                 response, ground_truth, all_text = search_and_answer_textract(
                     file_path=doc_path,
                     query=final_query,
@@ -293,10 +393,11 @@ def main():
         st.write(f"**Answer**: {response}")
 
         # Create a play button for Amazon Polly
-        with st.spinner("Processing Amazon Polly voice response from Claude 3"):
-            voice_id = 'Matthew'  # You can choose a different voice ID if desired
-            audio_data = synthesize_speech(response, voice_id)
-            st.audio(audio_data, format='audio/mp3')
+        if st.button("Generate Audio - Amazon Polly"):
+            with st.spinner("Processing Amazon Polly voice response from Claude 3"):
+                voice_id = 'Matthew'  # You can choose a different voice ID if desired
+                audio_data = synthesize_speech(response, voice_id)
+                st.audio(audio_data, format='audio/mp3')
 
         # Load and display ground truth if available
         if ground_truth:
