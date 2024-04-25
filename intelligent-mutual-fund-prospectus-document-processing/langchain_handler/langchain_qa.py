@@ -98,27 +98,16 @@ def create_or_retrieve_textract_file(file_path):
         all_text = obj['Body'].read().decode('utf-8')
     except:
         print(f"Text file {txt_file_key} does not exist in bucket {bucket_name}. Processing and uploading.")
-        config = TextLinearizationConfig(
-            hide_figure_layout=True,
-            title_prefix="<titles><<title>><title>",
-            title_suffix="</title><</title>>",
-            hide_header_layout=True,
-            section_header_prefix="<headers><<header>><header>",
-            section_header_suffix="</header><</header>>",
-            table_prefix="<tables><table>",
-            table_suffix="</table>",
-            list_layout_prefix="<<list>><list>",
-            list_layout_suffix="</list><</list>>",
-            hide_footer_layout=True,
-            hide_page_num_layout=True,
-        )
 
         document = extractor.start_document_analysis(
             file_source=file_path, 
             features=[TextractFeatures.LAYOUT, TextractFeatures.TABLES],
             s3_upload_path=f"s3://{bucket_name}/genai-demo/textract_pdfs",
-            save_image=f'/textract-processed/{file_path}'
+            save_image=f'./textract-processed/{file_path}'
         )
+
+        all_text = document.get_text()  # Replace double newlines with single newline
+        all_text = ' '.join(all_text.split())  # Remove extra whitespace
 
         # Upload the all_text to a text file in S3
         s3.put_object(
@@ -126,9 +115,6 @@ def create_or_retrieve_textract_file(file_path):
             Bucket=bucket_name,
             Key=f"genai-demo/{txt_file_key}",
         )
-
-        all_text = document.get_text(config=config)  # Replace double newlines with single newline
-        all_text = ' '.join(all_text.split())  # Remove extra whitespace
 
     return all_text
 
