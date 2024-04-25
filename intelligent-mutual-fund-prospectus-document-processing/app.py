@@ -323,6 +323,9 @@ def main():
             else: 
                 st.image("./assets/textract_diagram.png", use_column_width=True)
 
+        # Add a multiselect dropdown for Comprehend, Polly, and Textract
+        selected_services = st.multiselect("Select Additional AI Services", ["Comprehend", "Polly", "Textract"])
+
         
         # Handling user input for the question
         question = st.selectbox("Select question", [""] + questions, )
@@ -354,85 +357,91 @@ def main():
         )
         print("Q:", final_query)
 
-        if st.button("Analyze Sentiment - Amazon Comprehend"):
-            # Analyze sentiment of the question
-            with st.spinner("Generating Question Sentiment with Amazon Comprehend"):
-                sentiment, sentiment_score = analyze_sentiment(final_query)
-
-            # Display sentiment analysis results
-            if sentiment is not None and sentiment_score is not None:
-                st.metric(label="Sentiment", value=sentiment, delta=None)
-                # Display sentiment scores using st.metric
-                col1, col2, col3 = st.columns(3)
-                with col1:
-                    st.metric(label="Positive", value=sentiment_score.get('Positive', 0.0))
-                with col2:
-                    st.metric(label="Negative", value=sentiment_score.get('Negative', 0.0))
-                with col3:
-                    st.metric(label="Neutral", value=sentiment_score.get('Neutral', 0.0))
-
-        if st.button("Analyze PII - Amazon Comprehend"):
-            with st.spinner("Detecting PII entities with Amazon Comprehend"):
-                pii_entities = detect_pii_entities(final_query)
-
-            if pii_entities:
-                for entity in pii_entities:
-                    st.write(entity, unsafe_allow_html=True)
-            else:
-                st.info("No PII entities detected.")
-
         # code for processing the query and handling responses
-        if st.session_state.ocr_tool == "Claude 3 Vision":
-            print("Passing images to Claude 3 directly")
-            with st.spinner("Processing PDF with Claude 3 Vision"):
-                response, ground_truth, all_text = search_and_answer_claude_3_direct(
-                    file_path=doc_path,
-                    query=final_query,
+        with st.expander("Amazon Bedrock", expanded=True):
+            if st.session_state.ocr_tool == "Claude 3 Vision":
+                print("Passing images to Claude 3 directly")
+                with st.spinner("Processing Query with Claude 3 Vision"):
+                    response, ground_truth, all_text = search_and_answer_claude_3_direct(
+                        file_path=doc_path,
+                        query=final_query,
+                        )
+            else:
+                with st.spinner("Processing Query with Amazon Textract and Claude 3"):
+                    response, ground_truth, all_text = search_and_answer_textract(
+                        file_path=doc_path,
+                        query=final_query,
                     )
-        else:
-            with st.spinner("Processing PDF with Amazon Textract"):
-                response, ground_truth, all_text = search_and_answer_textract(
-                    file_path=doc_path,
-                    query=final_query,
-                )
 
-        print(response)
+            print("BEDROCK RESPONSE" + response)
 
-        st.write(f"**Answer**: {response}")
+            st.write(f"**Bedrock Response**: {response}")
+            st.write("\n")
+
+        if "Comprehend" in selected_services:
+            with st.expander("Amazon Comprehend", expanded=True):
+                # Analyze sentiment of the question
+                with st.spinner("Generating Question Sentiment with Amazon Comprehend"):
+                    sentiment, sentiment_score = analyze_sentiment(final_query)
+
+                # Display sentiment analysis results
+                if sentiment is not None and sentiment_score is not None:
+                    st.metric(label="Query Sentiment", value=sentiment, delta=None)
+                    # Display sentiment scores using st.metric
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric(label="Positive", value=sentiment_score.get('Positive', 0.0))
+                    with col2:
+                        st.metric(label="Negative", value=sentiment_score.get('Negative', 0.0))
+                    with col3:
+                        st.metric(label="Neutral", value=sentiment_score.get('Neutral', 0.0))
+
+                with st.spinner("Detecting PII entities with Amazon Comprehend"):
+                    pii_entities = detect_pii_entities(final_query)
+
+                if pii_entities:
+                    st.info(f"{len(pii_entities)} PII entities detected in query.")
+                    for entity in pii_entities:
+                        st.write(entity, unsafe_allow_html=True)
+                else:
+                    st.info("No PII entities detected.")
 
         # Create a play button for Amazon Polly
-        if st.button("Generate Audio - Amazon Polly"):
-            with st.spinner("Processing Amazon Polly voice response from Claude 3"):
-                voice_id = 'Matthew'  # You can choose a different voice ID if desired
-                audio_data = synthesize_speech(response, voice_id)
-                st.audio(audio_data, format='audio/mp3')
+        if "Polly" in selected_services:
+            with st.expander("Amazon Polly", expanded=True):
+                with st.spinner("Processing Amazon Polly voice response from Claude 3"):
+                    voice_id = 'Matthew'  # You can choose a different voice ID if desired
+                    audio_data = synthesize_speech(response, voice_id)
+                    st.audio(audio_data, format='audio/mp3')
 
-        # Load and display ground truth if available
-        if ground_truth:
-            st.markdown(
-                "**Ground truth**: " + markdown_bgcolor(ground_truth, "yellow"),
-                unsafe_allow_html=True,
-            )
-        else:
-            st.write("**Ground truth**: Not available")
+        if "Textract" in selected_services:
+            with st.expander("Amazon Textract", expanded=True):
+                with st.spinner("Processing Amazon Textract ground truth"):
+                    # Load and display ground truth if available
+                    if ground_truth:
+                        st.markdown(
+                            "**Ground truth**: " + markdown_bgcolor(ground_truth, "yellow"),
+                            unsafe_allow_html=True,
+                        )
+                        # Highlight and display evidence in the source documents
+                        tokens_answer = text_tokenizer(ground_truth)
+                        tokens_labels = text_tokenizer(f"{ground_truth}") if ground_truth else []
+                        tokens_miss = set(tokens_labels).difference(tokens_answer)
 
-        # Highlight and display evidence in the source documents
-        tokens_answer = text_tokenizer(ground_truth)
-        tokens_labels = text_tokenizer(f"{ground_truth}") if ground_truth else []
-        tokens_miss = set(tokens_labels).difference(tokens_answer)
+                        # ... [code for marking and displaying the document content]
+                        st.divider()
 
-        # ... [code for marking and displaying the document content]
-        st.divider()
+                        markd = markdown_escape(all_text)
 
-        print(all_text)
-        markd = markdown_escape(all_text)
+                        markd = markdown2(text=markd, tokens=tokens_answer, bg_color="#90EE90")
+                        markd = markdown2(text=markd, tokens=tokens_miss, bg_color="red")
 
-        markd = markdown2(text=markd, tokens=tokens_answer, bg_color="#90EE90")
-        markd = markdown2(text=markd, tokens=tokens_miss, bg_color="red")
+                        print("done")
 
-        print("done")
-
-        st.markdown(markd, unsafe_allow_html=True)
+                        st.markdown(markd, unsafe_allow_html=True)
+                    else:
+                        st.write("**Ground truth**: Not available")
+                        ground_truth = ""
 
 # Call the main function to run the app
 main()

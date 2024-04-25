@@ -151,7 +151,7 @@ def search_and_answer_claude_3_direct(file_path, query):
         # append the question to the beginning 
         encoded_messages.insert(0, {"type": "text", "text": f"""You are a data entry specialist and expert forensic document examiner.
                 Please answer the use question in the <{QUESTION_TAG}> XML tag, using only information in the data below. 
-                Please give the answer in the <{ANSWER_TAG}> XML tag. Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
+                Please give the answer formatted with markdownin in the <{ANSWER_TAG}> XML tag. Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
                 If the data the question asks for is not in the data tag then say I don't know and give an explanation why. Leave the ground truth empty if you don't know. 
 
                 <{QUESTION_TAG}>
@@ -171,8 +171,6 @@ def search_and_answer_claude_3_direct(file_path, query):
     response = bedrock_rt.invoke_model(modelId="anthropic.claude-3-sonnet-20240229-v1:0", body=json.dumps(body))
     text_resp = json.loads(response['body'].read().decode('utf-8'))
     full_string_text_response = text_resp['content'][0]['text']
-
-    print(full_string_text_response)
 
     # get the answer from the response
     answer = get_tag_text(full_string_text_response, ANSWER_TAG)
@@ -198,8 +196,7 @@ def search_and_answer_textract(file_path, query):
         {"role": "user", "content": [
             {"type": "text", "text": f"""You are a data entry specialist and expert forensic document examiner.
                 Please answer the use question in the <{QUESTION_TAG}> XML tag, using only information in the data below. 
-                Please give the answer in the <{ANSWER_TAG}> XML tag. Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
-                Please format your response as markdown within the <{ANSWER_TAG}> and <{GROUND_TRUTH_TAG}.
+                Please give the answer formatted with markdown in the <{ANSWER_TAG}> XML tag. Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
                 If the data the question asks for is not in the data tag then say I don't know and give an explanation why. Leave the ground truth empty if you don't know. 
 
                 <{QUESTION_TAG}>
