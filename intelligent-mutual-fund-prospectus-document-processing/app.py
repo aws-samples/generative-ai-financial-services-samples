@@ -230,6 +230,13 @@ def markdown_escape(text):
     """Escaping markup characters"""
     return re.sub(r"([\$\+\#\`\{\}])", "\\\1", text)
 
+def get_file_list(document_repo_file_path):
+    listdocs = os.listdir(document_repo_file_path)
+    relative_paths = [os.path.join(document_repo_file_path, file) for file in listdocs]
+    pdf_docs = [doc for doc in relative_paths if doc.endswith(".pdf")]
+
+    return pdf_docs
+
 
 def displayPDF(file):
     try:
@@ -261,6 +268,10 @@ def main():
         st.session_state.modelID = None
     if "claude3direct" not in st.session_state:
         st.session_state.claude3direct = False
+    if "file_list" not in st.session_state:
+        st.session_state.file_list = []
+
+    
     
     col1, col2, col3 = st.columns([2.0, 2.2, 2.0])
     with col1:
@@ -292,10 +303,7 @@ def main():
     col1, col2 = st.columns([2.2, 2.0])
     # Define doc_source_nm early on to ensure it's available when needed
     with col1:  # Right side - Only the full PDF display
-        listdocs = os.listdir(document_repo_file_path)
-        relative_paths = [os.path.join(document_repo_file_path, file) for file in listdocs]
-
-        pdf_docs = [doc for doc in relative_paths if doc.endswith(".pdf")]
+        pdf_docs = get_file_list(document_repo_file_path)
 
         doc_path = st.selectbox("Select doc", pdf_docs, key="pdf_selector", index=0)
 
@@ -416,6 +424,7 @@ def main():
         # ... [code for marking and displaying the document content]
         st.divider()
 
+        print(all_text)
         markd = markdown_escape(all_text)
 
         markd = markdown2(text=markd, tokens=tokens_answer, bg_color="#90EE90")

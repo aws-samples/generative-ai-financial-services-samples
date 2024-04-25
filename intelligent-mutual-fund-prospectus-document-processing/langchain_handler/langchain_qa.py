@@ -81,6 +81,57 @@ def amazon_bedrock_llm(model_id, verbose=False):
     llm.verbose = True
     return llm
 
+def create_or_retrieve_textract_file(file_path): 
+    s3 = boto3.client('s3')
+    extractor = Textractor(profile_name="default")
+    # Read from os env var called BUCKET_NAME and put in a var called "bucket_name"
+    
+    bucket_name = os.environ['BUCKET_NAME']
+    s3_key = os.path.basename(file_path)  # Get the file name from the file path
+    txt_file_key = f"{s3_key}.txt"  # Text file name with the same base name as the input file
+
+    # Check if the text file exists in the S3 bucket
+    try:
+        s3.head_object(Bucket=bucket_name, Key=f"genai-demo/{txt_file_key}")
+        print(f"Text file {txt_file_key} already exists in bucket {bucket_name}. Downloading and using as context.")
+        obj = s3.get_object(Bucket=bucket_name, Key=f"genai-demo/{txt_file_key}")
+        all_text = obj['Body'].read().decode('utf-8')
+    except:
+        print(f"Text file {txt_file_key} does not exist in bucket {bucket_name}. Processing and uploading.")
+        config = TextLinearizationConfig(
+            hide_figure_layout=True,
+            title_prefix="<titles><<title>><title>",
+            title_suffix="</title><</title>>",
+            hide_header_layout=True,
+            section_header_prefix="<headers><<header>><header>",
+            section_header_suffix="</header><</header>>",
+            table_prefix="<tables><table>",
+            table_suffix="</table>",
+            list_layout_prefix="<<list>><list>",
+            list_layout_suffix="</list><</list>>",
+            hide_footer_layout=True,
+            hide_page_num_layout=True,
+        )
+
+        document = extractor.start_document_analysis(
+            file_source=file_path, 
+            features=[TextractFeatures.LAYOUT, TextractFeatures.TABLES],
+            s3_upload_path=f"s3://{bucket_name}/genai-demo/textract_pdfs",
+            save_image=f'/textract-processed/{file_path}'
+        )
+
+        # Upload the all_text to a text file in S3
+        s3.put_object(
+            Body=all_text.encode('utf-8'),
+            Bucket=bucket_name,
+            Key=f"genai-demo/{txt_file_key}",
+        )
+
+        all_text = document.get_text(config=config)  # Replace double newlines with single newline
+        all_text = ' '.join(all_text.split())  # Remove extra whitespace
+
+    return all_text
+
 # Function to perform search and answer using the pdfs loaded into memory
 # as base64 encodings of the pdfs -> images then sent to claude 3 directly
 def search_and_answer_claude_3_direct(file_path, query):
@@ -93,18 +144,7 @@ def search_and_answer_claude_3_direct(file_path, query):
     images = []
     for page_index in range(len(pdf)):
         page = pdf[page_index]
-        bitmap = page.render(
-            scale=2.0,  # Increase the scale for higher resolution
-            rotation=0,
-            crop=(0, 0, 0, 0),  # No cropping
-            may_draw_forms=True,
-            bitmap_maker=pdfium.PdfBitmap.new_native,  # Use native bitmap format
-            color_scheme=None,  # Use default color scheme
-            fill_to_stroke=False,
-            rev_byteorder=False,  # Use default byte order
-            prefer_bgrx=False,  # Use default pixel format
-            force_bitmap_format=None  # Use automatic pixel format selection
-        )
+        bitmap = page.render()
         images.append(bitmap)
     encoded_messages = []
     for i in range(len(images)):
@@ -155,12 +195,7 @@ def search_and_answer_claude_3_direct(file_path, query):
     ground_truth = get_tag_text(full_string_text_response, GROUND_TRUTH_TAG)
 
     #get the text from the s3 bucket
-    s3 = boto3.client('s3')
-    bucket_name = os.environ['BUCKET_NAME']
-    s3_key = os.path.basename(file_path)  # Get the file name from the file path
-    txt_file_key = f"{s3_key}.txt"  # Text file name with the same base name as the input file
-    obj = s3.get_object(Bucket=bucket_name, Key=f"genai-demo/{txt_file_key}")
-    all_text = obj['Body'].read().decode('utf-8')
+    all_text = create_or_retrieve_textract_file(file_path)
 
     return answer, ground_truth, all_text
 
@@ -169,52 +204,8 @@ def search_and_answer_textract(file_path, query):
     GROUND_TRUTH_TAG = "GROUND"
     QUESTION_TAG = "QUESTION"
     DATA_TAG = "DATA"
-    s3 = boto3.client('s3')
-    extractor = Textractor(profile_name="default")
-    # Read from os env var called BUCKET_NAME and put in a var called "bucket_name"
     
-    bucket_name = os.environ['BUCKET_NAME']
-    s3_key = os.path.basename(file_path)  # Get the file name from the file path
-    txt_file_key = f"{s3_key}.txt"  # Text file name with the same base name as the input file
-
-    # Check if the text file exists in the S3 bucket
-    try:
-        s3.head_object(Bucket=bucket_name, Key=f"genai-demo/{txt_file_key}")
-        print(f"Text file {txt_file_key} already exists in bucket {bucket_name}. Downloading and using as context.")
-        obj = s3.get_object(Bucket=bucket_name, Key=f"genai-demo/{txt_file_key}")
-        all_text = obj['Body'].read().decode('utf-8')
-    except:
-        print(f"Text file {txt_file_key} does not exist in bucket {bucket_name}. Processing and uploading.")
-        config = TextLinearizationConfig(
-            hide_figure_layout=True,
-            title_prefix="<titles><<title>><title>",
-            title_suffix="</title><</title>>",
-            hide_header_layout=True,
-            section_header_prefix="<headers><<header>><header>",
-            section_header_suffix="</header><</header>>",
-            table_prefix="<tables><table>",
-            table_suffix="</table>",
-            list_layout_prefix="<<list>><list>",
-            list_layout_suffix="</list><</list>>",
-            hide_footer_layout=True,
-            hide_page_num_layout=True,
-        )
-
-        document = extractor.start_document_analysis(
-            file_source=file_path, 
-            features=[TextractFeatures.LAYOUT, TextractFeatures.TABLES],
-            s3_upload_path=f"s3://{bucket_name}/genai-demo/{s3_key}",
-            save_image=f'/textract-processed/{file_path}'
-        )
-        all_text = document.get_text(config=config)  # Replace double newlines with single newline
-        all_text = ' '.join(all_text.split())  # Remove extra whitespace
-
-        # Upload the all_text to a text file in S3
-        s3.put_object(
-            Body=all_text.encode('utf-8'),
-            Bucket=bucket_name,
-            Key=f"genai-demo/{txt_file_key}",
-        )
+    all_text = create_or_retrieve_textract_file(file_path)
 
     # Prepare the input for Bedrock runtime
     messages = [

@@ -1,7 +1,8 @@
 {
     "Applicant's Name": "What is the applicant's name?",
-    "Applicant's Address": "What is the applicant's address?",
+    "Applicant's Address": "What is the address or location?",
     "Insured": "Who is the insured?",
     "Effective Date": "What is the effective date?",
-    "Coverage Amount": "What is the coverage amount?"
+    "Coverage Amount": "What is the coverage amount?",
+    "Insurance Policy": "List all insurance policy numbers, types and effective dates. Write these in JSON format."
 }
