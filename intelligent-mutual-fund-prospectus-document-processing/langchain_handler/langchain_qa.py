@@ -147,22 +147,29 @@ def search_and_answer_claude_3_direct(file_path, query):
             "media_type": "image/png", 
             "data": img_base64_str
         }})
+
+        #get the text from the s3 bucket
+        all_text = create_or_retrieve_textract_file(file_path)
         
         # append the question to the beginning 
         encoded_messages.insert(0, {"type": "text", "text": f"""You are a data entry specialist and expert forensic document examiner.
                 Please answer the use question in the <{QUESTION_TAG}> XML tag, using only information in the data below. 
                 Please give the answer formatted with markdownin in the <{ANSWER_TAG}> XML tag. Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
-                If the data the question asks for is not in the data tag then say I don't know and give an explanation why. Leave the ground truth empty if you don't know. 
+                If the data the question asks for is not in the TEXT DATA or IMAGE DATA then say I don't know and give an explanation why. Leave the ground truth empty if you don't know. 
 
                 <{QUESTION_TAG}>
                 {query}
                 </{QUESTION_TAG}>
 
-                <{DATA_TAG}>
+                <TEXT DATA>
+                {all_text}
+                </TEXT DATA>
+
+                <IMAGE {DATA_TAG}>
                 """})
         
         #append closing tags to the data
-        encoded_messages.append({"type": "text", "text": f"</{DATA_TAG}>"})
+        encoded_messages.append({"type": "text", "text": f"</IMAGE {DATA_TAG}>"})
 
     messages = [{"role": "user", "content": encoded_messages}]
 
@@ -177,9 +184,6 @@ def search_and_answer_claude_3_direct(file_path, query):
 
     #get the ground truth from the response
     ground_truth = get_tag_text(full_string_text_response, GROUND_TRUTH_TAG)
-
-    #get the text from the s3 bucket
-    all_text = create_or_retrieve_textract_file(file_path)
 
     return answer, ground_truth, all_text
 

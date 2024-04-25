@@ -408,7 +408,7 @@ def main():
 
         # Create a play button for Amazon Polly
         if "Polly" in selected_services:
-            with st.expander("Amazon Polly", expanded=True):
+            with st.expander("Amazon Polly - Text to Speech", expanded=True):
                 with st.spinner("Processing Amazon Polly voice response from Claude 3"):
                     voice_id = 'Matthew'  # You can choose a different voice ID if desired
                     audio_data = synthesize_speech(response, voice_id)
