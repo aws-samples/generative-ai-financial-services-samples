@@ -155,21 +155,17 @@ def search_and_answer_claude_3_direct(file_path, query):
         encoded_messages.insert(0, {"type": "text", "text": f"""You are a data entry specialist and expert forensic document examiner.
                 Please answer the use question in the <{QUESTION_TAG}> XML tag, using only information in the data below. 
                 Please give the answer formatted with markdownin in the <{ANSWER_TAG}> XML tag. Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
-                If the data the question asks for is not in the TEXT DATA or IMAGE DATA then say I don't know and give an explanation why. Leave the ground truth empty if you don't know. 
+                If the data the question asks for is not in the DATA then say I don't know and give an explanation why. Leave the ground truth empty if you don't know. 
 
                 <{QUESTION_TAG}>
                 {query}
                 </{QUESTION_TAG}>
 
-                <TEXT DATA>
-                {all_text}
-                </TEXT DATA>
-
-                <IMAGE {DATA_TAG}>
+                <{DATA_TAG}>
                 """})
         
         #append closing tags to the data
-        encoded_messages.append({"type": "text", "text": f"</IMAGE {DATA_TAG}>"})
+        encoded_messages.append({"type": "text", "text": f"</{DATA_TAG}>"})
 
     messages = [{"role": "user", "content": encoded_messages}]
 
