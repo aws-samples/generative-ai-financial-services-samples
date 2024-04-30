@@ -194,7 +194,7 @@ def search_and_answer_textract(file_path, query):
     # Prepare the input for Bedrock runtime
     messages = [
         {"role": "user", "content": [
-            {"type": "text", "text": f"""You are an insurance document analysis specialist and expert forensic document examiner.
+            {"type": "text", "text": f"""You are a document analysis specialist and expert forensic document examiner.
                 Please answer the use question in the <{QUESTION_TAG}> XML tag, using only information in the data below. 
                 Please give the answer formatted with markdown in the <{ANSWER_TAG}> XML tag. Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
                 If the data the question asks for is not in the data tag then say I don't know and give an explanation why. Leave the ground truth empty if you don't know. 
