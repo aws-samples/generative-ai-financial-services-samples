@@ -14,6 +14,7 @@ from textractor.data.constants import TextractFeatures
 from textractor.data.text_linearization_config import TextLinearizationConfig
 import os
 import pypdfium2 as pdfium
+import time
 
 # Ensure that the Python version is compatible with the requirements
 def validate_environment():
@@ -223,3 +224,130 @@ def search_and_answer_textract(file_path, query):
     ground_truth = get_tag_text(full_string_text_response, GROUND_TRUTH_TAG)
 
     return answer, ground_truth, all_text
+
+# added for insurance policy evaluation
+# this will be the same as previous function except it will return if it is a question relating to 
+# insurance policies and it will return a list of the polcies that were returned.
+
+def search_and_answer_claude_3_insurance_policy(file_path, model_id):
+    CONTAINS_POLICY_TAG = "CONTAINS_POLICY"
+    POLICY_LIST_TAG = "POLICY_LIST"
+    DATA_TAG = "DATA"
+
+    pdf = pdfium.PdfDocument(file_path)
+    images = []
+    for page_index in range(len(pdf)):
+        page = pdf[page_index]
+        bitmap = page.render()
+        images.append(bitmap)
+    encoded_messages = []
+    for i in range(len(images)):
+        buffered = BytesIO()
+        pil_image = images[i].to_pil()
+        pil_image.save(buffered, format='PNG')
+        img_byte = buffered.getvalue()
+        img_base64 = base64.b64encode(img_byte)
+        img_base64_str = img_base64.decode('utf-8')
+        encoded_messages.append({
+        "type": "image", 
+        "source": {
+            "type": "base64",
+            "media_type": "image/png", 
+            "data": img_base64_str
+        }})
+        
+        # append the question to the beginning 
+        encoded_messages.insert(0, {"type": "text", "text": f"""You are an insurance document and policy specialist and expert forensic document examiner.
+                If this document contains insurance policies then return 'CONTAINS_POLICY' in the <{CONTAINS_POLICY_TAG}> XML tag.
+                Additionally if there are insurance policy numbers, please return them in a list, with each full policy number separated by ':::'  in a <{POLICY_LIST_TAG}> XML tag. 
+                If there are no insurance policy numbers, leave the <{POLICY_LIST_TAG}> XML tag empty.
+                Please answer using only information in the <{DATA_TAG}> XML tag below.
+
+                <{DATA_TAG}>
+                """})
+
+        #append closing tags to the data
+        encoded_messages.append({"type": "text", "text": f"</{DATA_TAG}>"})
+
+    messages = [{"role": "user", "content": encoded_messages}]
+
+    bedrock_rt = boto3.client("bedrock-runtime")
+    body = {"messages": messages, "max_tokens": 1000, "temperature": 0, "anthropic_version":"", "top_k": 250, "top_p": 1, "stop_sequences": ["User"]}
+    
+    # add a way to track how long the query takes
+    start_time = time.time()
+    response = bedrock_rt.invoke_model(modelId=model_id, body=json.dumps(body))
+    end_time = time.time()
+    query_time = end_time - start_time
+    text_resp = json.loads(response['body'].read().decode('utf-8'))
+    full_string_text_response = text_resp['content'][0]['text']
+
+    # get the answer from the response
+    contains_policy = get_tag_text(full_string_text_response, CONTAINS_POLICY_TAG)
+
+    #get the ground truth from the response
+    policy_list = get_tag_text(full_string_text_response, POLICY_LIST_TAG)
+
+    if policy_list != "":
+        policy_list = policy_list.split(":::")
+        policy_list = [int(x) for x in policy_list]
+    else: 
+        policy_list = []
+
+    print(policy_list)
+    print(contains_policy)
+
+    return contains_policy, policy_list, query_time
+
+def search_and_answer_textract_insurance_policy(file_path, model_id):
+    CONTAINS_POLICY_TAG = "CONTAINS_POLICY"
+    POLICY_LIST_TAG = "POLICY_LIST"
+    DATA_TAG = "DATA"
+
+    encoded_messages = []
+
+    #get the text from the s3 bucket
+    all_text = create_or_retrieve_textract_file(file_path)
+    
+    # append the question to the beginning 
+    encoded_messages.insert(0, {"type": "text", "text": f"""You are an insurance document and policy specialist and expert forensic document examiner.
+            If this document contains insurance policies then return 'CONTAINS_POLICY' in the <{CONTAINS_POLICY_TAG}> XML tag.
+            Additionally if there are insurance policy numbers, please return them in a list, with each full policy number separated by ':::'  in a <{POLICY_LIST_TAG}> XML tag. 
+            If there are no insurance policy numbers, leave the <{POLICY_LIST_TAG}> XML tag empty.
+            Please answer using only information in the <{DATA_TAG}> XML tag below.
+
+            <{DATA_TAG}>
+            {all_text}
+            </{DATA_TAG}>
+            """})
+
+
+    messages = [{"role": "user", "content": encoded_messages}]
+
+    bedrock_rt = boto3.client("bedrock-runtime")
+    body = {"messages": messages, "max_tokens": 1000, "temperature": 0, "anthropic_version":"", "top_k": 250, "top_p": 1, "stop_sequences": ["User"]}
+    
+    # add a way to track how long the query takes
+    start_time = time.time()
+    response = bedrock_rt.invoke_model(modelId=model_id, body=json.dumps(body))
+    end_time = time.time()
+    query_time = end_time - start_time
+    text_resp = json.loads(response['body'].read().decode('utf-8'))
+    full_string_text_response = text_resp['content'][0]['text']
+
+    # get the answer from the response
+    contains_policy = get_tag_text(full_string_text_response, CONTAINS_POLICY_TAG)
+
+    #get the ground truth from the response
+    policy_list = get_tag_text(full_string_text_response, POLICY_LIST_TAG)
+
+    if policy_list != "":
+        policy_list = policy_list.split(":::")
+        policy_list = [int(x) for x in policy_list]
+    else: 
+        policy_list = []
+
+    print(policy_list)
+    print(contains_policy)
+
+    return contains_policy, policy_list, query_time

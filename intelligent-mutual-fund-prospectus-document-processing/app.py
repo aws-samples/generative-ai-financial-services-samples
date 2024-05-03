@@ -8,7 +8,7 @@ from langchain_handler.langchain_qa import (
     validate_environment,
     amazon_bedrock_models,
     search_and_answer_claude_3_direct, 
-    search_and_answer_textract
+    search_and_answer_textract, search_and_answer_claude_3_insurance_policy, search_and_answer_textract_insurance_policy
 )
 from data_handlers.doc_source import DocSource, InMemoryAny
 from data_handlers.labels import load_labels_master, load_labels
@@ -20,7 +20,6 @@ from utils.utils_text import (
 )
 from utils.utils_os import (
     read_json, 
-    read_jsonl
 )
 import boto3
 import io
@@ -137,6 +136,28 @@ content_css = """
 
 # Inject CSS with Markdown
 st.markdown(content_css, unsafe_allow_html=True)
+
+import json
+import pandas as pd
+import pandas as pd
+
+# Load the JSON data
+with open('./assets/dummy_policy_data.json', 'r') as f:
+    data = json.load(f)
+
+# Create a list of dictionaries for the table
+policiesDB = []
+for policy in data:
+    policy_dict = {
+        'Policy Number': policy['policyNumber'],
+        'First Name': policy['firstName'],
+        'Last Name': policy['lastName'],
+        'Age': policy['age'],
+        'Phone': policy['phone'],
+        'Company': policy['company'],
+        'Policy Start': policy['policyStart']
+    }
+    policiesDB.append(policy_dict)
 
 # Define Streamlit cache decorators for various functions
 # These decorators help in caching the output of functions to enhance performance
@@ -317,7 +338,7 @@ def main():
 
     with col2:  # Left side - All settings and displays except the full PDF
         # Select a language model from the available options
-        with st.expander('Architecture Diagram', expanded=True): 
+        with st.expander('Architecture Diagram', expanded=False): 
             if st.session_state.ocr_tool == 'Claude 3 Vision':
                 st.image("./assets/claude_3_vision_diagram.png", use_column_width=True)
             else: 
@@ -377,6 +398,75 @@ def main():
 
             st.write(f"**Bedrock Response**: {response}")
             st.write("\n")
+
+        # code for processing the query and handling responses
+        with st.expander("Amazon Bedrock - Insurance Policy Review", expanded=True):
+            if st.session_state.ocr_tool == "Claude 3 Vision":
+                print("Passing images to Claude 3 directly")
+                with st.spinner("Processing Query with Claude 3 Vision"):
+                    # returned_policies is list of ints, where ints are policy numbers
+                    contains_policy, returned_policies, query_time = search_and_answer_claude_3_insurance_policy(
+                        file_path=doc_path, 
+                        model_id=model_id
+                        )
+            else:
+                with st.spinner("Processing Query with Amazon Textract and Claude 3"):
+                    # returned_policies is list of ints, where ints are policy numbers
+                    contains_policy, returned_policies, query_time = search_and_answer_textract_insurance_policy(
+                        file_path=doc_path, 
+                        model_id=model_id
+                    )
+            
+            # make a streamlit showing st.metric of how
+            if contains_policy == "CONTAINS_POLICY":
+                # add a green checkmark with streamlit
+                st.success(f"**Bedrock Response**: The document contains an insurance policy.", icon="✅")
+                # add an st.metric of query time with 2 sig figs and label seconds
+                query_time = round(query_time, 2)
+                query_time = f"{query_time} seconds"
+                st.metric(label="Query Time", value=query_time, delta=None)
+                st.write("**Insurance Policies**")
+                counter = 0
+                # make a dataframe with columns "Policy Number", "Policy Holder", "Policy Holder Contact", "Generate Report".
+                returned_policy_df = pd.DataFrame(columns=["Company", "Policy Number", "Policy Holder", "Policy Holder Contact", "Found in DB"])
+                bool = True
+                for returned_policy in returned_policies:
+                    policy_found = False
+                    for policy in policiesDB:
+                        #write the policy information to the dataframe
+                        # add the matching policies to the dataframe
+                        if policy["Policy Number"] == returned_policy:
+                            # set Policy Number in dataframe 
+                            returned_policy_df.loc[counter, "Policy Number"] = policy['Policy Number']
+                            # set Policy Holder in dataframe
+                            returned_policy_df.loc[counter, "Policy Holder"] = policy['First Name'] + " " + policy['Last Name']
+                            # set Policy Holder Contact in dataframe
+                            returned_policy_df.loc[counter, "Policy Holder Contact"] = policy['Phone']
+                            # set Company in dataframe
+                            returned_policy_df.loc[counter, "Company"] = policy['Company']
+                            # set Found in DB in dataframe
+                            returned_policy_df.loc[counter, "Found in DB"] = "Yes"
+                            policy_found = True
+                    if policy_found == False:
+                        # set Policy Number in dataframe
+                        returned_policy_df.loc[counter, "Policy Number"] = returned_policy
+                        # set Found in DB in dataframe
+                        returned_policy_df.loc[counter, "Found in DB"] = "No"
+                    counter += 1
+                    if policy_found == False:
+                        bool = False
+                            
+                        
+                st.table(returned_policy_df)
+                if bool:
+                    st.success("All policies found in database", icon="✅")
+                    st.button('Upload doc to S3')
+                else: 
+                    st.success("Not all policies found in database", icon="❌")
+                    st.button('Send to A2I for Human Review')
+            else: 
+                st.warning(f"**Bedrock Response**: The document does not contain insurance policies.", icon="❌")
+
 
         if "Comprehend" in selected_services:
             with st.expander("Amazon Comprehend", expanded=True):
@@ -442,6 +532,10 @@ def main():
                     else:
                         st.write("**Ground truth**: Not available")
                         ground_truth = ""
+
+    # Create the table
+    st.write('## PolicyDB')
+    st.table(policiesDB)
 
 # Call the main function to run the app
 main()
