@@ -5,10 +5,9 @@ import yaml
 import re
 import base64
 from langchain_handler.langchain_qa import (
+    search_and_answer_pdf,
     validate_environment,
     amazon_bedrock_models,
-    search_and_answer_claude_3_direct, 
-    search_and_answer_textract
 )
 from data_handlers.doc_source import DocSource, InMemoryAny
 from data_handlers.labels import load_labels_master, load_labels
@@ -355,30 +354,25 @@ def main():
             disabled=False,
             max_chars=1000,
         )
-        print("Q:", final_query)
+        print("\n\nQ:", final_query)
 
-        # code for processing the query and handling responses
+        # code for processing the query and handling responses from Bedrock
         with st.expander("Amazon Bedrock", expanded=True):
-            if st.session_state.ocr_tool == "Claude 3 Vision":
-                print("Passing images to Claude 3 directly")
-                with st.spinner("Processing Query with Claude 3 Vision"):
-                    response, ground_truth, all_text = search_and_answer_claude_3_direct(
-                        file_path=doc_path,
-                        query=final_query,
-                        )
-            else:
-                with st.spinner("Processing Query with Amazon Textract and Claude 3"):
-                    response, ground_truth, all_text = search_and_answer_textract(
-                        file_path=doc_path,
-                        query=final_query,
+            with st.spinner("Processing Query with Amazon Bedrock"):
+                response, ground_truth, all_text = search_and_answer_pdf(
+                    file_path=doc_path,
+                    query=final_query,
+                    ocr_tool=st.session_state.ocr_tool, 
+                    model_id=st.session_state.modelID,
                     )
 
-            print("BEDROCK RESPONSE" + response)
+            print("BEDROCK RESPONSE:" + response)
 
             st.write(f"**Bedrock Response**: {response}")
             st.write("\n")
 
         if "Comprehend" in selected_services:
+            print("Adding Comrehend analysis to response.")
             with st.expander("Amazon Comprehend", expanded=True):
                 # Analyze sentiment of the question
                 with st.spinner("Generating Question Sentiment with Amazon Comprehend"):
@@ -408,6 +402,7 @@ def main():
 
         # Create a play button for Amazon Polly
         if "Polly" in selected_services:
+            print("Adding Polly analysis to response.")
             with st.expander("Amazon Polly - Text to Speech", expanded=True):
                 with st.spinner("Processing Amazon Polly voice response from Claude 3"):
                     voice_id = 'Matthew'  # You can choose a different voice ID if desired
@@ -415,12 +410,13 @@ def main():
                     st.audio(audio_data, format='audio/mp3')
 
         if "Textract" in selected_services:
+            print("Adding Textract keyword highlighting to response.")
             with st.expander("Amazon Textract", expanded=True):
                 with st.spinner("Processing Amazon Textract ground truth"):
                     # Load and display ground truth if available
                     if ground_truth:
                         st.markdown(
-                            "**Ground truth**: " + markdown_bgcolor(ground_truth, "yellow"),
+                            "**Answer keywords**: " + markdown_bgcolor(ground_truth, "yellow"),
                             unsafe_allow_html=True,
                         )
                         # Highlight and display evidence in the source documents
@@ -436,11 +432,9 @@ def main():
                         markd = markdown2(text=markd, tokens=tokens_answer, bg_color="#90EE90")
                         markd = markdown2(text=markd, tokens=tokens_miss, bg_color="red")
 
-                        print("done")
-
                         st.markdown(markd, unsafe_allow_html=True)
                     else:
-                        st.write("**Ground truth**: Not available")
+                        st.write("**Answer keywords**: Not available")
                         ground_truth = ""
 
 # Call the main function to run the app

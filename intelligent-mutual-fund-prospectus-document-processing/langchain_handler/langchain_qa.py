@@ -72,6 +72,7 @@ def amazon_bedrock_llm(model_id, verbose=False):
     model_configs = amazon_bedrock_models()
     assert model_id in model_configs
 
+def get_llm(model_id):
     # Create a BedrockCached instance with model configurations
     llm = BedrockCached(
         model_id=model_id,
@@ -81,51 +82,7 @@ def amazon_bedrock_llm(model_id, verbose=False):
     llm.verbose = True
     return llm
 
-def create_or_retrieve_textract_file(file_path): 
-    s3 = boto3.client('s3')
-    extractor = Textractor(profile_name="default")
-    # Read from os env var called BUCKET_NAME and put in a var called "bucket_name"
-    
-    bucket_name = os.environ['BUCKET_NAME']
-    s3_key = os.path.basename(file_path)  # Get the file name from the file path
-    txt_file_key = f"{s3_key}.txt"  # Text file name with the same base name as the input file
-
-    # Check if the text file exists in the S3 bucket
-    try:
-        s3.head_object(Bucket=bucket_name, Key=f"genai-demo/{txt_file_key}")
-        print(f"Text file {txt_file_key} already exists in bucket {bucket_name}. Downloading and using as context.")
-        obj = s3.get_object(Bucket=bucket_name, Key=f"genai-demo/{txt_file_key}")
-        all_text = obj['Body'].read().decode('utf-8')
-    except:
-        print(f"Text file {txt_file_key} does not exist in bucket {bucket_name}. Processing and uploading.")
-
-        document = extractor.start_document_analysis(
-            file_source=file_path, 
-            features=[TextractFeatures.LAYOUT, TextractFeatures.TABLES],
-            s3_upload_path=f"s3://{bucket_name}/genai-demo/textract_pdfs",
-            save_image=False
-        )
-
-        all_text = document.get_text()  # Replace double newlines with single newline
-        all_text = ' '.join(all_text.split())  # Remove extra whitespace
-
-        # Upload the all_text to a text file in S3
-        s3.put_object(
-            Body=all_text.encode('utf-8'),
-            Bucket=bucket_name,
-            Key=f"genai-demo/{txt_file_key}",
-        )
-
-    return all_text
-
-# Function to perform search and answer using the pdfs loaded into memory
-# as base64 encodings of the pdfs -> images then sent to claude 3 directly
-def search_and_answer_claude_3_direct(file_path, query):
-    ANSWER_TAG = "ANSWER"
-    GROUND_TRUTH_TAG = "GROUND"
-    QUESTION_TAG = "QUESTION"
-    DATA_TAG = "DATA"
-
+def encode_pdf_to_base64(file_path):
     pdf = pdfium.PdfDocument(file_path)
     images = []
     for page_index in range(len(pdf)):
@@ -141,20 +98,25 @@ def search_and_answer_claude_3_direct(file_path, query):
         img_base64 = base64.b64encode(img_byte)
         img_base64_str = img_base64.decode('utf-8')
         encoded_messages.append({
-        "type": "image", 
-        "source": {
-            "type": "base64",
-            "media_type": "image/png", 
-            "data": img_base64_str
-        }})
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": "image/png",
+                "data": img_base64_str
+            }
+        })
+    return encoded_messages
 
-        #get the text from the s3 bucket
-        all_text = create_or_retrieve_textract_file(file_path)
-        
-        # append the question to the beginning 
-        encoded_messages.insert(0, {"type": "text", "text": f"""You are a data entry specialist and expert forensic document examiner.
+def prepare_claude_3_prompt(query, encoded_images):
+    ANSWER_TAG = "ANSWER"
+    GROUND_TRUTH_TAG = "GROUND"
+    QUESTION_TAG = "QUESTION"
+    DATA_TAG = "DATA"
+
+    encoded_messages = []
+    encoded_messages.insert(0, {"type": "text", "text": f"""You are a data entry specialist and expert forensic document examiner.
                 Please answer the use question in the <{QUESTION_TAG}> XML tag, using only information in the data below. 
-                Please give the answer formatted with markdownin in the <{ANSWER_TAG}> XML tag. Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
+                Please give the answer formatted with markdown in the <{ANSWER_TAG}> XML tag. Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
                 If the data the question asks for is not in the DATA then say I don't know and give an explanation why. Leave the ground truth empty if you don't know. 
 
                 <{QUESTION_TAG}>
@@ -163,63 +125,113 @@ def search_and_answer_claude_3_direct(file_path, query):
 
                 <{DATA_TAG}>
                 """})
-        
-        #append closing tags to the data
-        encoded_messages.append({"type": "text", "text": f"</{DATA_TAG}>"})
 
-    messages = [{"role": "user", "content": encoded_messages}]
+    encoded_messages.extend(encoded_images)
+    encoded_messages.append({"type": "text", "text": f"</{DATA_TAG}>"})
 
+    return encoded_messages
+
+def call_claude_3_model(messages, model_id):
     bedrock_rt = boto3.client("bedrock-runtime")
-    body = {"messages": messages, "max_tokens": 1000, "temperature": 0, "anthropic_version":"", "top_k": 250, "top_p": 1, "stop_sequences": ["User"]}
-    response = bedrock_rt.invoke_model(modelId="anthropic.claude-3-sonnet-20240229-v1:0", body=json.dumps(body))
+    body = {"messages": [{"role": "user", "content": messages}], "max_tokens": 1000, "temperature": 0, "anthropic_version": "", "top_k": 250, "top_p": 1, "stop_sequences": ["User"]}
+    response = bedrock_rt.invoke_model(modelId=model_id, body=json.dumps(body))
     text_resp = json.loads(response['body'].read().decode('utf-8'))
-    full_string_text_response = text_resp['content'][0]['text']
+    return text_resp['content'][0]['text']
 
-    # get the answer from the response
-    answer = get_tag_text(full_string_text_response, ANSWER_TAG)
+def extract_answer_and_ground_truth(text_response):
+    ANSWER_TAG = "ANSWER"
+    GROUND_TRUTH_TAG = "GROUND"
 
-    #get the ground truth from the response
-    ground_truth = get_tag_text(full_string_text_response, GROUND_TRUTH_TAG)
+    answer = get_tag_text(text_response, ANSWER_TAG)
+    ground_truth = get_tag_text(text_response, GROUND_TRUTH_TAG)
 
-    return answer, ground_truth, all_text
+    return answer, ground_truth
 
-def search_and_answer_textract(file_path, query):
+def prepare_textract_prompt(query, text_data):
     ANSWER_TAG = "ANSWER"
     GROUND_TRUTH_TAG = "GROUND"
     QUESTION_TAG = "QUESTION"
     DATA_TAG = "DATA"
-    
-    all_text = create_or_retrieve_textract_file(file_path)
 
-    # Prepare the input for Bedrock runtime
-    messages = [
-        {"role": "user", "content": [
-            {"type": "text", "text": f"""You are a document analysis specialist and expert forensic document examiner.
+    prompt = f"""You are a document analysis specialist and expert forensic document examiner.
                 Please answer the use question in the <{QUESTION_TAG}> XML tag, using only information in the data below. 
                 Please give the answer formatted with markdown in the <{ANSWER_TAG}> XML tag. Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
-                If the data the question asks for is not in the data tag then say I don't know and give an explanation why. Leave the ground truth empty if you don't know. 
+                If the data the question asks for is not in the DATA then say I don't know and give an explanation why. Leave the ground truth empty if you don't know. 
 
                 <{QUESTION_TAG}>
                 {query}
                 </{QUESTION_TAG}>
 
                 <{DATA_TAG}>
-                {all_text}
+                {text_data}
                 </{DATA_TAG}>
-                """}]}
-    ]
+                """
 
-    # Send the input to Bedrock runtime
-    bedrock_rt = boto3.client("bedrock-runtime")
-    body = {"messages": messages, "max_tokens": 1000, "temperature": 0, "anthropic_version":"", "top_k": 250, "top_p": 1, "stop_sequences": ["User"]}
-    response = bedrock_rt.invoke_model(modelId="anthropic.claude-3-sonnet-20240229-v1:0", body=json.dumps(body))
-    text_resp = json.loads(response['body'].read().decode('utf-8'))
-    full_string_text_response = text_resp['content'][0]['text']
+    return prompt
 
-    # get the answer from the response
-    answer = get_tag_text(full_string_text_response, ANSWER_TAG)
-
-    #get the ground truth from the response
-    ground_truth = get_tag_text(full_string_text_response, GROUND_TRUTH_TAG)
+def search_and_answer_pdf(file_path, query, ocr_tool, model_id):
+    all_text = create_or_retrieve_textract_file(file_path)
+    if ocr_tool == "Claude 3 Vision":
+        print("Passing images to Claude 3 Vision as OCR")
+        encoded_images = encode_pdf_to_base64(file_path)
+        prompt = prepare_claude_3_prompt(query, encoded_images)
+    else: 
+        print("Passing images to Claude 3 using Textract as OCR")
+        prompt = prepare_textract_prompt(query, all_text)
+    response_text = call_claude_3_model(prompt, model_id)
+    answer, ground_truth = extract_answer_and_ground_truth(response_text)
 
     return answer, ground_truth, all_text
+
+def check_s3_for_text_file(bucket_name, s3_key):
+    s3 = boto3.client('s3')
+    try:
+        s3.head_object(Bucket=bucket_name, Key=s3_key)
+        return True
+    except:
+        return False
+
+def download_text_file_from_s3(bucket_name, s3_key):
+    s3 = boto3.client('s3')
+    try:
+        obj = s3.get_object(Bucket=bucket_name, Key=s3_key)
+        text_content = obj['Body'].read().decode('utf-8')
+        return text_content
+    except:
+        return None
+
+def process_pdf_with_textract(file_path, bucket_name):
+    extractor = Textractor(profile_name="default")
+    document = extractor.start_document_analysis(
+        file_source=file_path,
+        features=[TextractFeatures.LAYOUT, TextractFeatures.TABLES],
+        s3_upload_path=f"s3://{bucket_name}/genai-demo/textract_pdfs",
+        save_image=False
+    )
+
+    all_text = document.get_text()
+    all_text = ' '.join(all_text.split())  # Remove extra whitespace
+
+    return all_text
+
+def upload_text_to_s3(text_content, bucket_name, s3_key):
+    s3 = boto3.client('s3')
+    s3.put_object(
+        Body=text_content.encode('utf-8'),
+        Bucket=bucket_name,
+        Key=s3_key,
+    )
+
+def create_or_retrieve_textract_file(file_path):
+    bucket_name = os.environ['BUCKET_NAME']
+    s3_key = os.path.basename(file_path) + ".txt"
+
+    if check_s3_for_text_file(bucket_name, s3_key):
+        print(f"Text file {s3_key} already exists in bucket {bucket_name}. Downloading and using as context.")
+        all_text = download_text_file_from_s3(bucket_name, s3_key)
+    else:
+        print(f"Text file {s3_key} does not exist in bucket {bucket_name}. Processing and uploading.")
+        all_text = process_pdf_with_textract(file_path, bucket_name)
+        upload_text_to_s3(all_text, bucket_name, s3_key)
+
+    return all_text
