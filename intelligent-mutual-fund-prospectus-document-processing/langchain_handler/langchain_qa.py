@@ -1,34 +1,17 @@
 import re
 import platform
 import boto3
-from botocore.config import Config
-from langchain.chains.question_answering import load_qa_chain
-from langchain_community.docstore import InMemoryDocstore
-from langchain.vectorstores.opensearch_vector_search import OpenSearchVectorSearch
-from langchain_handler.langchain_bedrock_wrappers import BedrockCached
 import base64
 from io import BytesIO 
 import json
 from textractor import Textractor
 from textractor.data.constants import TextractFeatures
-from textractor.data.text_linearization_config import TextLinearizationConfig
 import os
 import pypdfium2 as pdfium
 
 # Ensure that the Python version is compatible with the requirements
 def validate_environment():
     assert platform.python_version() >= "3.10.6"
-
-
-# Function to create a Bedrock client for interacting with AWS services
-def amazon_bedrock_client():
-    config = Config(retries={"max_attempts": 8})
-
-    # Return a Bedrock client session
-    return boto3.Session().client(
-        "bedrock-runtime",
-        config=config,
-    )
 
 
 # Function to get configurations for different Bedrock models
@@ -56,7 +39,6 @@ def amazon_bedrock_models():
             "max_tokens": 300,
             "stop_sequences": ["\n\nHuman"],
         },
-        "amazon.titan-tg1-large": {"temperature": 0.0, "maxTokenCount": 300},
     }
 
 def get_tag_text(text, tag_name):
@@ -66,21 +48,6 @@ def get_tag_text(text, tag_name):
         return match.group(1)
     else:
         return None
-
-# Function to create a cached Bedrock LLM instance
-def amazon_bedrock_llm(model_id, verbose=False):
-    model_configs = amazon_bedrock_models()
-    assert model_id in model_configs
-
-def get_llm(model_id):
-    # Create a BedrockCached instance with model configurations
-    llm = BedrockCached(
-        model_id=model_id,
-        client=amazon_bedrock_client(),
-    )
-    llm.model_kwargs = model_configs[model_id]
-    llm.verbose = True
-    return llm
 
 def encode_pdf_to_base64(file_path):
     pdf = pdfium.PdfDocument(file_path)
@@ -107,7 +74,23 @@ def encode_pdf_to_base64(file_path):
         })
     return encoded_messages
 
-def prepare_claude_3_prompt(query, encoded_images):
+def call_claude_3_model(messages, system_prompt, model_id):
+    bedrock_rt = boto3.client("bedrock-runtime")
+    body = {"messages": [{"role": "user", "content": messages}], "system":system_prompt, "max_tokens": 1000, "temperature": 0, "anthropic_version": "", "top_k": 250, "top_p": 1, "stop_sequences": ["User"]}
+    response = bedrock_rt.invoke_model(modelId=model_id, body=json.dumps(body))
+    text_resp = json.loads(response['body'].read().decode('utf-8'))
+    return text_resp['content'][0]['text']
+
+def extract_answer_and_ground_truth(text_response):
+    ANSWER_TAG = "ANSWER"
+    GROUND_TRUTH_TAG = "GROUND"
+
+    answer = get_tag_text(text_response, ANSWER_TAG)
+    ground_truth = get_tag_text(text_response, GROUND_TRUTH_TAG)
+
+    return answer, ground_truth
+
+def prepare_claude_3_vision_prompt(query, encoded_images):
     ANSWER_TAG = "ANSWER"
     GROUND_TRUTH_TAG = "GROUND"
     QUESTION_TAG = "QUESTION"
@@ -131,22 +114,6 @@ def prepare_claude_3_prompt(query, encoded_images):
 
     return encoded_messages
 
-def call_claude_3_model(messages, model_id):
-    bedrock_rt = boto3.client("bedrock-runtime")
-    body = {"messages": [{"role": "user", "content": messages}], "max_tokens": 1000, "temperature": 0, "anthropic_version": "", "top_k": 250, "top_p": 1, "stop_sequences": ["User"]}
-    response = bedrock_rt.invoke_model(modelId=model_id, body=json.dumps(body))
-    text_resp = json.loads(response['body'].read().decode('utf-8'))
-    return text_resp['content'][0]['text']
-
-def extract_answer_and_ground_truth(text_response):
-    ANSWER_TAG = "ANSWER"
-    GROUND_TRUTH_TAG = "GROUND"
-
-    answer = get_tag_text(text_response, ANSWER_TAG)
-    ground_truth = get_tag_text(text_response, GROUND_TRUTH_TAG)
-
-    return answer, ground_truth
-
 def prepare_textract_prompt(query, text_data):
     ANSWER_TAG = "ANSWER"
     GROUND_TRUTH_TAG = "GROUND"
@@ -169,16 +136,52 @@ def prepare_textract_prompt(query, text_data):
 
     return prompt
 
+def prepare_claude_3_vision_and_textract_prompt(query, encoded_images, all_text):
+    ANSWER_TAG = "ANSWER"
+    GROUND_TRUTH_TAG = "GROUND"
+    QUESTION_TAG = "QUESTION"
+    TEXT_DATA_TAG = "TEXT_DATA"
+    IMAGE_DATA_TAG = "IMAGE_DATA"
+
+    encoded_messages = []
+    encoded_messages.insert(0, {"type": "text", "text": f"""You are a data entry specialist and expert forensic document examiner.
+                Please answer the use question in the <{QUESTION_TAG}> XML tag, using only information in the data below. 
+                Please give the answer formatted with markdown in the <{ANSWER_TAG}> XML tag. Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
+                If the data the question asks for is not in the DATA then say I don't know and give an explanation why. Leave the ground truth empty if you don't know. 
+
+                <{QUESTION_TAG}>
+                {query}
+                </{QUESTION_TAG}>
+
+                <{TEXT_DATA_TAG}>
+                {all_text}
+                </{TEXT_DATA_TAG}>
+
+                <{IMAGE_DATA_TAG}>
+                """})
+
+    encoded_messages.extend(encoded_images)
+    encoded_messages.append({"type": "text", "text": f"</{IMAGE_DATA_TAG}>"})
+
+    return encoded_messages
+
 def search_and_answer_pdf(file_path, query, ocr_tool, model_id):
     all_text = create_or_retrieve_textract_file(file_path)
     if ocr_tool == "Claude 3 Vision":
         print("Passing images to Claude 3 Vision as OCR")
         encoded_images = encode_pdf_to_base64(file_path)
-        prompt = prepare_claude_3_prompt(query, encoded_images)
+        prompt, system_prompt = prepare_claude_3_vision_prompt(query, encoded_images)
+    elif ocr_tool == "Claude 3 Vision & Textract":
+        print("Passing images to Claude 3 Vision as OCR and Textract as OCR")
+        encoded_images = encode_pdf_to_base64(file_path)
+        prompt, system_prompt = prepare_claude_3_vision_and_textract_prompt(query, encoded_images, all_text)
+    elif ocr_tool == "Textract": 
+        print("Passing images to Claude 3 using Textract as OCR")
+        prompt, system_prompt = prepare_textract_prompt(query, all_text)
     else: 
         print("Passing images to Claude 3 using Textract as OCR")
-        prompt = prepare_textract_prompt(query, all_text)
-    response_text = call_claude_3_model(prompt, model_id)
+        prompt, system_prompt = prepare_textract_prompt(query, all_text)
+    response_text = call_claude_3_model(prompt, system_prompt, model_id)
     answer, ground_truth = extract_answer_and_ground_truth(response_text)
 
     return answer, ground_truth, all_text

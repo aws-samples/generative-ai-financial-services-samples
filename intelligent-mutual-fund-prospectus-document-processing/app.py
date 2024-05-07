@@ -275,7 +275,7 @@ def main():
     col1, col2, col3 = st.columns([2.0, 2.2, 2.0])
     with col1:
         # Select OCR Tool
-        st.session_state.ocr_tool = st.selectbox("Select OCR Tool", ["Textract", "Claude 3 Vision"])
+        st.session_state.ocr_tool = st.selectbox("Select OCR Tool", ["Textract", "Claude 3 Vision", "Claude 3 Vision & Textract"])
         compatible_models = []
         if st.session_state.ocr_tool == "Textract":
             compatible_models = [model for model in list_llm_models()]
