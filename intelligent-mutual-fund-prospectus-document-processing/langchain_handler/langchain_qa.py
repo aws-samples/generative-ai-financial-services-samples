@@ -76,7 +76,14 @@ def encode_pdf_to_base64(file_path):
 
 def call_claude_3_model(messages, system_prompt, model_id):
     bedrock_rt = boto3.client("bedrock-runtime")
-    body = {"messages": [{"role": "user", "content": messages}], "system":system_prompt, "max_tokens": 1000, "temperature": 0, "anthropic_version": "", "top_k": 250, "top_p": 1, "stop_sequences": ["User"]}
+    body = {"messages": [{"role": "user", "content": messages}], 
+            "system":system_prompt, 
+            "max_tokens": 1000, 
+            "temperature": 0, 
+            "anthropic_version": "", 
+            "top_k": 250, 
+            "top_p": 1, 
+            "stop_sequences": ["User"]}
     response = bedrock_rt.invoke_model(modelId=model_id, body=json.dumps(body))
     text_resp = json.loads(response['body'].read().decode('utf-8'))
     return text_resp['content'][0]['text']
@@ -97,22 +104,28 @@ def prepare_claude_3_vision_prompt(query, encoded_images):
     DATA_TAG = "DATA"
 
     encoded_messages = []
-    encoded_messages.insert(0, {"type": "text", "text": f"""You are a data entry specialist and expert forensic document examiner.
-                Please answer the use question in the <{QUESTION_TAG}> XML tag, using only information in the data below. 
-                Please give the answer formatted with markdown in the <{ANSWER_TAG}> XML tag. Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
-                If the data the question asks for is not in the DATA then say I don't know and give an explanation why. Leave the ground truth empty if you don't know. 
-
+    encoded_messages.insert(0, {"type": "text", "text": f"""
+                Below is the question: 
                 <{QUESTION_TAG}>
                 {query}
                 </{QUESTION_TAG}>
 
                 <{DATA_TAG}>
+                Images provided as input. 
+                </{DATA_TAG}>
                 """})
-
     encoded_messages.extend(encoded_images)
-    encoded_messages.append({"type": "text", "text": f"</{DATA_TAG}>"})
 
-    return encoded_messages
+    system_prompt = f"""You are a document analysis specialist and expert forensic document examiner.
+                Please answer the user question in the <{QUESTION_TAG}> XML tag, using the images provided as input. 
+                Please give the answer formatted with markdown in the <{ANSWER_TAG}> XML tag. 
+                Please make sure the uploaded images as input. 
+                Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
+                If the data the question asks for is not in the DATA then say I don't know and give an explanation why. 
+                Leave the ground truth empty if you don't know. 
+                """
+
+    return encoded_messages, system_prompt
 
 def prepare_textract_prompt(query, text_data):
     ANSWER_TAG = "ANSWER"
@@ -120,21 +133,28 @@ def prepare_textract_prompt(query, text_data):
     QUESTION_TAG = "QUESTION"
     DATA_TAG = "DATA"
 
-    prompt = f"""You are a document analysis specialist and expert forensic document examiner.
-                Please answer the use question in the <{QUESTION_TAG}> XML tag, using only information in the data below. 
-                Please give the answer formatted with markdown in the <{ANSWER_TAG}> XML tag. Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
-                If the data the question asks for is not in the DATA then say I don't know and give an explanation why. Leave the ground truth empty if you don't know. 
-
+    prompt = f"""Below is the user question:
                 <{QUESTION_TAG}>
                 {query}
                 </{QUESTION_TAG}>
 
+                Below is the data in text format:
                 <{DATA_TAG}>
                 {text_data}
                 </{DATA_TAG}>
+
+                Given the question provided within the <{QUESTION_TAG}> XML tag, please answer the question using the <{DATA_TAG}> XML tag.
                 """
 
-    return prompt
+    system_prompt = f"""You are a document analysis specialist and expert forensic document examiner.
+                Please answer the user question in the <{QUESTION_TAG}> XML tag.
+                Please give the answer formatted with markdown in the <{ANSWER_TAG}> XML tag. 
+                Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
+                If the data the question asks for is not in the DATA then say I don't know and give an explanation why. 
+                Leave the ground truth empty if you don't know. 
+                """
+
+    return prompt, system_prompt
 
 def prepare_claude_3_vision_and_textract_prompt(query, encoded_images, all_text):
     ANSWER_TAG = "ANSWER"
@@ -144,26 +164,35 @@ def prepare_claude_3_vision_and_textract_prompt(query, encoded_images, all_text)
     IMAGE_DATA_TAG = "IMAGE_DATA"
 
     encoded_messages = []
-    encoded_messages.insert(0, {"type": "text", "text": f"""You are a data entry specialist and expert forensic document examiner.
-                Please answer the use question in the <{QUESTION_TAG}> XML tag, using only information in the data below. 
-                Please give the answer formatted with markdown in the <{ANSWER_TAG}> XML tag. Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
-                If the data the question asks for is not in the DATA then say I don't know and give an explanation why. Leave the ground truth empty if you don't know. 
-
+    encoded_messages.insert(0, {"type": "text", "text": f"""
+                Below is the question: 
                 <{QUESTION_TAG}>
                 {query}
                 </{QUESTION_TAG}>
 
+                Below is the text data: 
                 <{TEXT_DATA_TAG}>
                 {all_text}
                 </{TEXT_DATA_TAG}>
 
                 <{IMAGE_DATA_TAG}>
+                Images passed as input. 
+                </{IMAGE_DATA_TAG}>
                 """})
 
-    encoded_messages.extend(encoded_images)
-    encoded_messages.append({"type": "text", "text": f"</{IMAGE_DATA_TAG}>"})
 
-    return encoded_messages
+    encoded_messages.extend(encoded_images)
+
+    system_prompt = f"""You are a document analysis specialist and expert forensic document examiner.
+                Please answer the user question in the <{QUESTION_TAG}> XML tag, using both the text data provided in the <{TEXT_DATA_TAG}> XML tag and the images provided as input. 
+                Please give the answer formatted with markdown in the <{ANSWER_TAG}> XML tag. 
+                Please make sure to use the combination of the text data input and the images to answer the question. 
+                Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
+                If the data the question asks for is not in the DATA then say I don't know and give an explanation why. 
+                Leave the ground truth empty if you don't know. 
+                """
+    
+    return encoded_messages, system_prompt
 
 def search_and_answer_pdf(file_path, query, ocr_tool, model_id):
     all_text = create_or_retrieve_textract_file(file_path)
