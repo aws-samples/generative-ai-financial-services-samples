@@ -105,14 +105,16 @@ def prepare_claude_3_vision_prompt(query, encoded_images):
 
     encoded_messages = []
     encoded_messages.insert(0, {"type": "text", "text": f"""
+                <{DATA_TAG}>
+                Images provided as input. 
+                </{DATA_TAG}>
+                                
                 Below is the question: 
                 <{QUESTION_TAG}>
                 {query}
                 </{QUESTION_TAG}>
-
-                <{DATA_TAG}>
-                Images provided as input. 
-                </{DATA_TAG}>
+               
+                Given the question provided within the <{QUESTION_TAG}> XML tag, please answer the question using the images provided as input. 
                 """})
     encoded_messages.extend(encoded_images)
 
@@ -165,19 +167,21 @@ def prepare_claude_3_vision_and_textract_prompt(query, encoded_images, all_text)
 
     encoded_messages = []
     encoded_messages.insert(0, {"type": "text", "text": f"""
-                Below is the question: 
+                <{IMAGE_DATA_TAG}>
+                Images passed as input. 
+                </{IMAGE_DATA_TAG}>
+
+                Below is the extracted text data: 
+                <{TEXT_DATA_TAG}>
+                {all_text}
+                </{TEXT_DATA_TAG}>
+                                
+                Below is the question from our user: 
                 <{QUESTION_TAG}>
                 {query}
                 </{QUESTION_TAG}>
 
-                Below is the text data: 
-                <{TEXT_DATA_TAG}>
-                {all_text}
-                </{TEXT_DATA_TAG}>
-
-                <{IMAGE_DATA_TAG}>
-                Images passed as input. 
-                </{IMAGE_DATA_TAG}>
+                Given the question provided within the <{QUESTION_TAG}> XML tag, please answer the question using the <{TEXT_DATA_TAG}> XML tag and the <{IMAGE_DATA_TAG}> XML tag for image input.
                 """})
 
 
