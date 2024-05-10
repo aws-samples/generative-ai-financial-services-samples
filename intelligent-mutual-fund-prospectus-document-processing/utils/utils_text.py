@@ -126,7 +126,6 @@ def spans_of_tokens_compact(text, tokens):
     return sorted(solutions[i], key=itemgetter(0))
 
 
-# Function to find all spans containing the tokens
 def spans_of_tokens_all(text, tokens):
     """
     Find all the spans containing the tokens.
@@ -135,11 +134,39 @@ def spans_of_tokens_all(text, tokens):
     # Exclude not present tokens
     text_lo = text.lower()
     tokens = [t for t in tokens if t.lower() in text_lo]
+    tokens = [t for t in tokens if len(t) > 1]
     if not tokens:
         return []
 
-    occurrences = [
-        [(m.start(), m.end()) for m in re.finditer(t, text, flags=re.IGNORECASE)]
-        for t in tokens
-    ]
-    return chain.from_iterable(occurrences)
+    occurrences = []
+    for t in tokens:
+        try:
+            # Escape special characters in the token
+            escaped_token = re.escape(t)
+            matches = [(m.start(), m.end()) for m in re.finditer(escaped_token, text, flags=re.IGNORECASE)]
+            occurrences.extend(matches)
+        except re.error as e:
+            print(f"Error with token '{t}': {e}")
+
+    return occurrences
+
+
+def spans_of_tokens_all(text, tokens):
+    """
+    Find all the spans containing the tokens.
+    Returns a list of offsets [i,j]
+    """
+    # Exclude not present tokens
+    text_lo = text.lower()
+    tokens = [t for t in tokens if t.lower() in text_lo and len(t) > 1]
+    if not tokens:
+        return []
+
+    # Combine tokens into a single regex pattern
+    pattern = '|'.join(re.escape(t) for t in tokens)
+    pattern = re.compile(pattern, re.IGNORECASE)
+
+    # Find all matches in a single pass
+    occurrences = [m.span() for m in pattern.finditer(text)]
+
+    return occurrences

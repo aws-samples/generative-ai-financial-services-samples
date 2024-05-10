@@ -1,13 +1,13 @@
+import os
+from botocore.exceptions import ClientError
 import streamlit as st
 import yaml
 import re
 import base64
 from langchain_handler.langchain_qa import (
+    search_and_answer_pdf,
     validate_environment,
     amazon_bedrock_models,
-    amazon_bedrock_llm,
-    chain_qa,
-    search_and_answer,
 )
 from data_handlers.doc_source import DocSource, InMemoryAny
 from data_handlers.labels import load_labels_master, load_labels
@@ -17,10 +17,112 @@ from utils.utils_text import (
     spans_of_tokens_all,
     text_tokenizer,
 )
+from utils.utils_os import (
+    read_json, 
+    read_jsonl
+)
+import boto3
+import io
+from contextlib import closing
 
+# check if an env variable called BUCKET_NAME is existing
+# if yes, continue, else error out and say "S3 Bucket must be set for Textract processing. Please see README for more information"
+if "BUCKET_NAME" not in os.environ:
+    raise Exception("S3 Bucket must be set for Textract processing. Please see README for more information")
 
 # Set page title
-st.set_page_config(page_title="Financial Q/A App", layout="wide")
+st.set_page_config(page_title="FSI Q/A App", layout="wide")
+
+def synthesize_speech(text, voice_id):
+    polly_client = boto3.Session().client('polly')
+    response = polly_client.synthesize_speech(
+        Text=text,
+        OutputFormat='mp3',
+        VoiceId=voice_id
+    )
+
+    stream = response.get('AudioStream')
+    mp3_data = io.BytesIO()
+    with closing(stream):
+        mp3_data.write(stream.read())
+
+    return mp3_data.getvalue()
+
+comprehend = boto3.client('comprehend')
+
+def analyze_sentiment(text):
+    try:
+        response = comprehend.detect_sentiment(Text=text, LanguageCode='en')
+        sentiment = response['Sentiment']
+        sentiment_score = response['SentimentScore']
+        return sentiment, sentiment_score
+    except Exception as e:
+        print(f"Error: {e}")
+        return None, None
+    
+def detect_pii_entities(text):
+    try:
+        response = comprehend.detect_pii_entities(Text=text, LanguageCode='en')
+        entities = response.get('Entities', [])
+        entity_texts = [
+            f"- {entity['Type']}: {format_entity_text(entity, text)}"
+            for entity in entities
+        ]
+        return entity_texts
+    except ClientError as e:
+        print(f"Error: {e}")
+        return []
+    
+entity_colors = {
+    'DEFAULT': {'color': '#e0e0e0', 'country': 'universal', 'emoji': '🌍'},
+    'BANK_ACCOUNT_NUMBER': {'color': '#ff9999', 'country': 'US', 'emoji': '💳'},
+    'CREDIT_DEBIT_NUMBER': {'color': '#ffcdd2', 'country': 'universal', 'emoji': '💳'},
+    'ADDRESS': {'color': '#e0e0e0', 'country': 'universal', 'emoji': '🏠'},
+    'AGE': {'color': '#f3e5f5', 'country': 'universal', 'emoji': '🕰️'},
+    'AWS_ACCESS_KEY': {'color': '#b2dfdb', 'country': 'universal', 'emoji': '🔑'},
+    'AWS_SECRET_KEY': {'color': '#b2dfdb', 'country': 'universal', 'emoji': '🔑'},
+    'CREDIT_DEBIT_CVV': {'color': '#e1bee7', 'country': 'universal', 'emoji': '💳'},
+    'CREDIT_DEBIT_EXPIRY': {'color': '#e1bee7', 'country': 'universal', 'emoji': '💳'},
+    'DATE_TIME': {'color': '#c8e6c9', 'country': 'universal', 'emoji': '📅'},
+    'DRIVER_ID': {'color': '#ffcdd2', 'country': 'universal', 'emoji': '🚗'},
+    'EMAIL': {'color': '#b3e5fc', 'country': 'universal', 'emoji': '📧'},
+    'INTERNATIONAL_BANK_ACCOUNT_NUMBER': {'color': '#ff9999', 'country': 'international', 'emoji': '💳'},
+    'IP_ADDRESS': {'color': '#b2dfdb', 'country': 'universal', 'emoji': '🌐'},
+    'LICENSE_PLATE': {'color': '#ffcdd2', 'country': 'universal', 'emoji': '🚗'},
+    'MAC_ADDRESS': {'color': '#b2dfdb', 'country': 'universal', 'emoji': '🖥️'},
+    'NAME': {'color': '#f3e5f5', 'country': 'universal', 'emoji': '👤'},
+    'PASSWORD': {'color': '#e1bee7', 'country': 'universal', 'emoji': '🔒'},
+    'PHONE': {'color': '#c8e6c9', 'country': 'universal', 'emoji': '📞'},
+    'PIN': {'color': '#e1bee7', 'country': 'universal', 'emoji': '🔢'},
+    'SWIFT_CODE': {'color': '#ff9999', 'country': 'universal', 'emoji': '💳'},
+    'URL': {'color': '#b3e5fc', 'country': 'universal', 'emoji': '🌐'},
+    'USERNAME': {'color': '#b3e5fc', 'country': 'universal', 'emoji': '👤'},
+    'VEHICLE_IDENTIFICATION_NUMBER': {'color': '#ffcdd2', 'country': 'universal', 'emoji': '🚗'},
+    'CA_HEALTH_NUMBER': {'color': '#ff9999', 'country': 'CA', 'emoji': '🏥'},
+    'CA_SOCIAL_INSURANCE_NUMBER': {'color': '#ff9999', 'country': 'CA', 'emoji': '🏦'},
+    'IN_AADHAAR': {'color': '#ff9999', 'country': 'IN', 'emoji': '🇮🇳'},
+    'IN_NREGA': {'color': '#ff9999', 'country': 'IN', 'emoji': '🇮🇳'},
+    'IN_PERMANENT_ACCOUNT_NUMBER': {'color': '#ff9999', 'country': 'IN', 'emoji': '🇮🇳'},
+    'IN_VOTER_NUMBER': {'color': '#ff9999', 'country': 'IN', 'emoji': '🇮🇳'},
+    'UK_NATIONAL_HEALTH_SERVICE_NUMBER': {'color': '#ff9999', 'country': 'UK', 'emoji': '🇬🇧'},
+    'UK_NATIONAL_INSURANCE_NUMBER': {'color': '#ff9999', 'country': 'UK', 'emoji': '🇬🇧'},
+    'UK_UNIQUE_TAXPAYER_REFERENCE_NUMBER': {'color': '#ff9999', 'country': 'UK', 'emoji': '🇬🇧'},
+    'BANK_ROUTING': {'color': '#ff9999', 'country': 'US', 'emoji': '💳'},
+    'PASSPORT_NUMBER': {'color': '#ffcdd2', 'country': 'US', 'emoji': '🇺🇸'},
+    'US_INDIVIDUAL_TAX_IDENTIFICATION_NUMBER': {'color': '#ff9999', 'country': 'US', 'emoji': '🇺🇸'},
+    'SSN': {'color': '#ff9999', 'country': 'US', 'emoji': '🇺🇸'}
+}
+
+def format_entity_text(entity, text):
+    entity_type = entity['Type']
+    entity_text = text[entity['BeginOffset']:entity['EndOffset']]
+    color = entity_colors[entity_type]['color']
+    emoji = entity_colors[entity_type]['emoji']
+    country = entity_colors[entity_type]['country']
+    return f"<span style='background-color:{color};'>{country} - {emoji} - {entity_text}</span>"
+
+# Remove whitespace from the top of the page and sidebar
+st.write('<style>div.block-container{padding-top:2rem;}</style>', unsafe_allow_html=True)
 
 # Set content to center
 content_css = """
@@ -35,11 +137,6 @@ content_css = """
 # Inject CSS with Markdown
 st.markdown(content_css, unsafe_allow_html=True)
 
-# Load configuration from a YAML file
-with open("config.yml", "r") as file:
-    config = yaml.safe_load(file)
-
-
 # Define Streamlit cache decorators for various functions
 # These decorators help in caching the output of functions to enhance performance
 @st.cache_resource
@@ -47,91 +144,38 @@ def check_env():
     # Validate the environment for the langchain QA model
     validate_environment()
 
-
 @st.cache_data
 def list_llm_models():
     models = list(amazon_bedrock_models().keys())
     return models
 
-
-@st.cache_resource
-def create_qa_chain(model_id, verbose=False):
-    if model_id in amazon_bedrock_models():
-        llm = amazon_bedrock_llm(model_id, verbose=verbose)
-    else:
-        assert False, f"Unknown {model_id}"
-
-    print("Make QA chain for", model_id)
-    print(llm)
-    return chain_qa(llm, verbose=verbose)
-
-
-@st.cache_resource
-def list_doc_source_instances():
-    return [InMemoryAny(config["corpus"] + config["extension"])]
-
-
-@st.cache_data
-def list_doc_sources():
-    return [str(x) for x in list_doc_source_instances()]
-
-
-def to_doc_source(doc_source_str: str) -> DocSource:
-    """String to class instance"""
-    return next(i for i in list_doc_source_instances() if str(i) == doc_source_str)
-
-
-@st.cache_data
-def list_doc(doc_source_nm):
-    doc_source = to_doc_source(doc_source_nm)
-    return doc_source.list_doc()
-
-
-def make_doc_store(doc_source_nm, doc_path):
-    doc_source = to_doc_source(doc_source_nm)
-    # Now capturing both values
-    store, num_docs = doc_source.make_doc_store(doc_path)
-    print(f"Number of documents: {num_docs}")
-    # Return both to the caller
-    return store, num_docs
-
-
-@st.cache_data
-def load_datapoint_master():
-    return load_labels_master(config["datapoint_master"])
-
-
-@st.cache_data
-def list_questions():
-    questions = load_datapoint_master()
-    questions = ["Ask your question"] + list(questions.values())
-    return [f"{i}. {q}" for i, q in enumerate(questions)]
-
-
 def clean_question(s):
     """Strip heading question number"""
     return re.sub(r"^[\d\.\s]+", "", s)
 
-
-@st.cache_data
-def list_groundtruth(doc_path, question):
-    # Find datapoint name
-    datapoints = load_datapoint_master()
-    # Find Ground Truth for that datapoint for that pdf
-    iter_ = (k for k, q in datapoints.items() if q == question)
-    datapoint = next(iter_, None)
-    ground_truth = load_labels(doc_path, config["datapoint_labels"]).get(
-        datapoint, None
-    )
-    return datapoint, ground_truth
-
-
 def markdown_bgcolor(text, bg_color):
     return f'<span style="background-color:{bg_color};">{text}</span>'
 
-
 def markdown_fgcolor(text, fg_color):
     return f":{fg_color}[{text}]"
+
+# Function to save the uploaded file
+def save_uploaded_file(uploaded_file, upload_dir):
+    try:
+        # Get the file extension
+        file_extension = os.path.splitext(uploaded_file.name)[1]
+        
+        # Check if the file is a PDF
+        if file_extension.lower() == ".pdf":
+            # Save the file to the specified directory
+            file_path = os.path.join(upload_dir, uploaded_file.name)
+            with open(file_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            st.success(f"File '{uploaded_file.name}' uploaded successfully!")
+        else:
+            st.error("Only PDF files are allowed.")
+    except Exception as e:
+        st.error(f"Error uploading file: {e}")
 
 
 def markdown_naive(text, tokens, bg_color=None):
@@ -185,6 +229,13 @@ def markdown_escape(text):
     """Escaping markup characters"""
     return re.sub(r"([\$\+\#\`\{\}])", "\\\1", text)
 
+def get_file_list(document_repo_file_path):
+    listdocs = os.listdir(document_repo_file_path)
+    relative_paths = [os.path.join(document_repo_file_path, file) for file in listdocs]
+    pdf_docs = [doc for doc in relative_paths if doc.endswith(".pdf")]
+
+    return pdf_docs
+
 
 def displayPDF(file):
     try:
@@ -207,47 +258,76 @@ def main():
     # Ensure the environment is set up correctly
     check_env()
 
-    st.title("Intelligent Mutual Fund Prospectus Document Processing")
+    st.title("Intelligent Document Processing for FSI.")
 
-    col1, col2 = st.columns([2.2, 2.0])  # Adjust the ratio as needed
+    # Select a language model from the available options
 
+    # Initialize session state variables
+    if "modelID" not in st.session_state:
+        st.session_state.modelID = None
+    if "claude3direct" not in st.session_state:
+        st.session_state.claude3direct = False
+    if "file_list" not in st.session_state:
+        st.session_state.file_list = []
+
+    
+    
+    col1, col2, col3 = st.columns([2.0, 2.2, 2.0])
+    with col1:
+        # Select OCR Tool
+        st.session_state.ocr_tool = st.selectbox("Select OCR Tool", ["Textract", "Claude 3 Vision", "Claude 3 Vision & Textract"])
+        compatible_models = []
+        if st.session_state.ocr_tool == "Textract":
+            compatible_models = [model for model in list_llm_models()]
+        else:
+            compatible_models = ['anthropic.claude-3-sonnet-20240229-v1:0', "anthropic.claude-3-haiku-20240307-v1:0"]
+    with col2: 
+        model_id = st.selectbox("Select LLM", compatible_models)
+
+        # Update session state variables
+        st.session_state.modelID = model_id
+
+    with col3: 
+        demo_version = st.selectbox("Select Examples Version", ["Insurance Examples", "Mutual Fund Examples"])
+
+        if demo_version == "Insurance Examples":
+            document_repo_file_path = './docs/insurance/'
+        elif demo_version == "Mutual Fund Examples":
+            document_repo_file_path = './docs/mutual_fund/'
+        
+        questions = read_json(document_repo_file_path + 'questions.json')
+        questions = ["Ask your question"] + list(questions.values())
+        questions = [f"{i}. {q}" for i, q in enumerate(questions)]
+        
+    col1, col2 = st.columns([2.2, 2.0])
     # Define doc_source_nm early on to ensure it's available when needed
     with col1:  # Right side - Only the full PDF display
-        doc_source_nm = st.selectbox("Select documents source", list_doc_sources())
-        listdocs = list_doc(doc_source_nm)
-        pdf_docs = [doc for doc in listdocs if doc.endswith(".pdf")]
+        pdf_docs = get_file_list(document_repo_file_path)
 
-        doc_path = st.selectbox("Select doc", pdf_docs, key="pdf_selector")
+        doc_path = st.selectbox("Select doc", pdf_docs, key="pdf_selector", index=0)
+
+        uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
+        if uploaded_file is not None:
+            save_uploaded_file(uploaded_file, upload_dir=document_repo_file_path)
+
         if doc_path.lower().endswith(".pdf"):
             displayPDF(doc_path)
+            
 
     with col2:  # Left side - All settings and displays except the full PDF
         # Select a language model from the available options
-        model_id = st.selectbox("Select LLM", list_llm_models())
+        with st.expander('Architecture Diagram', expanded=True): 
+            if st.session_state.ocr_tool == 'Claude 3 Vision':
+                st.image("./assets/claude_3_vision_diagram.png", use_column_width=True)
+            else: 
+                st.image("./assets/textract_diagram.png", use_column_width=True)
 
-        # Create a QA (Question Answering) chain based on the selected model
-        chain_qa = create_qa_chain(model_id, verbose=True)
-        prompt_trailer = "Answer in short."
+        # Add a multiselect dropdown for Comprehend, Polly, and Textract
+        selected_services = st.multiselect("Select Additional AI Services", ["Comprehend", "Polly", "Textract"])
 
-        if (
-            st.session_state.get("doc_source_nm", "") != doc_source_nm
-            or st.session_state.get("doc_path", "") != doc_path
-        ):
-            st.empty()
-
-            # Load vector store
-            store, num_docs = make_doc_store(doc_source_nm, doc_path)
-            st.session_state["doc_source_nm"] = doc_source_nm
-            st.session_state["doc_path"] = doc_path
-            st.session_state["store"] = store
-            st.session_state["num_docs"] = num_docs
-        else:
-            store = st.session_state["store"]
-            num_docs = st.session_state["num_docs"]
-            doc_path = st.session_state["doc_path"]
-
+        
         # Handling user input for the question
-        question = st.selectbox("Select question", [""] + list_questions())
+        question = st.selectbox("Select question", [""] + questions, )
         question = clean_question(question)
 
         # Allow user to input a custom question if needed
@@ -261,13 +341,12 @@ def main():
             return
 
         # Construct the query by appending a trailer for concise answers
-        query = question + " " + prompt_trailer
+        query = question
         query = query.strip()
-        print("Q:", query)
 
         # Display the formatted question
         st.write("**Question**")
-        st.text_area(
+        final_query = st.text_area(
             label="Preview",
             value=query,
             label_visibility="collapsed",
@@ -275,80 +354,88 @@ def main():
             disabled=False,
             max_chars=1000,
         )
+        print("\n\nQ:", final_query)
 
-        # code for processing the query and handling responses
-        K = 1
-        for attempt in range(4):
-            try:
-                response = search_and_answer(
-                    store,
-                    chain_qa,
-                    # prompt_template,
-                    query,
-                    k=num_docs,
-                )
-                answer = response["response"]
-                break  # Success
-            except Exception as e:
-                print(e)
-                st.spinner(text=type(e).__name__)
-                if type(e).__name__ == "ValidationException" and K > 1:
-                    print("Retrying using shorter context")
-                    K -= 1
-                elif type(e).__name__ == "ThrottlingException":
-                    print("Retrying")
+        # code for processing the query and handling responses from Bedrock
+        with st.expander("Amazon Bedrock", expanded=True):
+            with st.spinner("Processing Query with Amazon Bedrock"):
+                response, ground_truth, all_text = search_and_answer_pdf(
+                    file_path=doc_path,
+                    query=final_query,
+                    ocr_tool=st.session_state.ocr_tool, 
+                    model_id=st.session_state.modelID,
+                    )
+
+            print("BEDROCK RESPONSE:" + response)
+
+            st.write(f"**Bedrock Response**: {response}")
+            st.write("\n")
+
+        if "Comprehend" in selected_services:
+            print("Adding Comrehend analysis to response.")
+            with st.expander("Amazon Comprehend", expanded=True):
+                # Analyze sentiment of the question
+                with st.spinner("Generating Question Sentiment with Amazon Comprehend"):
+                    sentiment, sentiment_score = analyze_sentiment(final_query)
+
+                # Display sentiment analysis results
+                if sentiment is not None and sentiment_score is not None:
+                    st.metric(label="Query Sentiment", value=sentiment, delta=None)
+                    # Display sentiment scores using st.metric
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        st.metric(label="Positive", value=sentiment_score.get('Positive', 0.0))
+                    with col2:
+                        st.metric(label="Negative", value=sentiment_score.get('Negative', 0.0))
+                    with col3:
+                        st.metric(label="Neutral", value=sentiment_score.get('Neutral', 0.0))
+
+                with st.spinner("Detecting PII entities with Amazon Comprehend"):
+                    pii_entities = detect_pii_entities(final_query)
+
+                if pii_entities:
+                    st.info(f"{len(pii_entities)} PII entities detected in query.")
+                    for entity in pii_entities:
+                        st.write(entity, unsafe_allow_html=True)
                 else:
-                    # continue
-                    raise e
+                    st.info("No PII entities detected.")
 
-        print(answer)
+        # Create a play button for Amazon Polly
+        if "Polly" in selected_services:
+            print("Adding Polly analysis to response.")
+            with st.expander("Amazon Polly - Text to Speech", expanded=True):
+                with st.spinner("Processing Amazon Polly voice response from Claude 3"):
+                    voice_id = 'Matthew'  # You can choose a different voice ID if desired
+                    audio_data = synthesize_speech(response, voice_id)
+                    st.audio(audio_data, format='audio/mp3')
 
-        # Display the answer to the user
-        if "Helpful Answer:" in answer:
-            answer = answer.split("Helpful Answer:")[1]
+        if "Textract" in selected_services:
+            print("Adding Textract keyword highlighting to response.")
+            with st.expander("Amazon Textract", expanded=True):
+                with st.spinner("Processing Amazon Textract ground truth"):
+                    # Load and display ground truth if available
+                    if ground_truth:
+                        st.markdown(
+                            "**Answer keywords**: " + markdown_bgcolor(ground_truth, "yellow"),
+                            unsafe_allow_html=True,
+                        )
+                        # Highlight and display evidence in the source documents
+                        tokens_answer = text_tokenizer(ground_truth)
+                        tokens_labels = text_tokenizer(f"{ground_truth}") if ground_truth else []
+                        tokens_miss = set(tokens_labels).difference(tokens_answer)
 
-        # need a double-whitespace before \n to get a newline
-        # multiple questions at once
-        if "\n" in answer:
-            print("Split answer by newline")
-            st.write("**Answer**")
-            for line in answer.split("\n"):
-                st.text(line)
-        else:
-            st.write(f"**Answer**: :blue[{answer}]")
+                        # ... [code for marking and displaying the document content]
+                        st.divider()
 
-        # Load and display ground truth if available
-        dp, gt = list_groundtruth(doc_path, question)
-        if gt:
-            st.markdown(
-                "**Ground truth**: " + markdown_bgcolor(gt, "yellow"),
-                unsafe_allow_html=True,
-            )
-        else:
-            st.write("**Ground truth**: Not available")
+                        markd = markdown_escape(all_text)
 
-        # Highlight and display evidence in the source documents
-        tokens_answer = text_tokenizer(answer)
-        tokens_labels = text_tokenizer(f"{gt}") if gt else []
-        tokens_miss = set(tokens_labels).difference(tokens_answer)
+                        markd = markdown2(text=markd, tokens=tokens_answer, bg_color="#90EE90")
+                        markd = markdown2(text=markd, tokens=tokens_miss, bg_color="red")
 
-        print("response n_docs", len(response["docs"]))
-
-        # ... [code for marking and displaying the document content]
-        for i, doc in enumerate(response["docs"]):
-            st.divider()
-
-            markd = doc.page_content
-
-            markd = markdown_escape(markd)
-
-            markd = markdown2(text=markd, tokens=tokens_answer, bg_color="#90EE90")
-            markd = markdown2(text=markd, tokens=tokens_miss, bg_color="red")
-
-            print("done")
-
-            st.markdown(markd, unsafe_allow_html=True)
-
+                        st.markdown(markd, unsafe_allow_html=True)
+                    else:
+                        st.write("**Answer keywords**: Not available")
+                        ground_truth = ""
 
 # Call the main function to run the app
 main()
