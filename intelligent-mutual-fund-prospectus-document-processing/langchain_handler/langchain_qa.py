@@ -65,6 +65,10 @@ def encode_pdf_to_base64(file_path):
         img_base64 = base64.b64encode(img_byte)
         img_base64_str = img_base64.decode('utf-8')
         encoded_messages.append({
+            "type": "text",
+            "text": "Image " + str(i+1) + " :"
+        })
+        encoded_messages.append({
             "type": "image",
             "source": {
                 "type": "base64",
@@ -104,11 +108,10 @@ def prepare_claude_3_vision_prompt(query, encoded_images):
     DATA_TAG = "DATA"
 
     encoded_messages = []
-    encoded_messages.insert(0, {"type": "text", "text": f"""
-                <{DATA_TAG}>
-                Images provided as input. 
-                </{DATA_TAG}>
-                                
+
+    encoded_messages.extend(encoded_images)
+
+    encoded_messages.append({"type": "text", "text": f"""
                 Below is the question: 
                 <{QUESTION_TAG}>
                 {query}
@@ -116,7 +119,6 @@ def prepare_claude_3_vision_prompt(query, encoded_images):
                
                 Given the question provided within the <{QUESTION_TAG}> XML tag, please answer the question using the images provided as input. 
                 """})
-    encoded_messages.extend(encoded_images)
 
     system_prompt = f"""You are a document analysis specialist and expert forensic document examiner.
                 Please answer the user question in the <{QUESTION_TAG}> XML tag, using the images provided as input. 
@@ -166,11 +168,10 @@ def prepare_claude_3_vision_and_textract_prompt(query, encoded_images, all_text)
     IMAGE_DATA_TAG = "IMAGE_DATA"
 
     encoded_messages = []
-    encoded_messages.insert(0, {"type": "text", "text": f"""
-                <{IMAGE_DATA_TAG}>
-                Images passed as input. 
-                </{IMAGE_DATA_TAG}>
 
+    encoded_messages.extend(encoded_images)
+
+    encoded_messages.append({"type": "text", "text": f"""
                 Below is the extracted text data: 
                 <{TEXT_DATA_TAG}>
                 {all_text}
@@ -181,11 +182,9 @@ def prepare_claude_3_vision_and_textract_prompt(query, encoded_images, all_text)
                 {query}
                 </{QUESTION_TAG}>
 
-                Given the question provided within the <{QUESTION_TAG}> XML tag, please answer the question using the <{TEXT_DATA_TAG}> XML tag and the <{IMAGE_DATA_TAG}> XML tag for image input.
+                Given the question provided within the <{QUESTION_TAG}> XML tag, please answer the question using the <{TEXT_DATA_TAG}> XML tag and the images provided.
                 """})
 
-
-    encoded_messages.extend(encoded_images)
 
     system_prompt = f"""You are a document analysis specialist and expert forensic document examiner.
                 Please answer the user question in the <{QUESTION_TAG}> XML tag, using both the text data provided in the <{TEXT_DATA_TAG}> XML tag and the images provided as input. 
@@ -195,7 +194,7 @@ def prepare_claude_3_vision_and_textract_prompt(query, encoded_images, all_text)
                 If the data the question asks for is not in the DATA then say I don't know and give an explanation why. 
                 Leave the ground truth empty if you don't know. 
                 """
-    
+    print(encoded_messages)
     return encoded_messages, system_prompt
 
 def search_and_answer_pdf(file_path, query, ocr_tool, model_id):
