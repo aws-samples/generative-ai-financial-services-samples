@@ -317,8 +317,10 @@ def main():
     with col2:  # Left side - All settings and displays except the full PDF
         # Select a language model from the available options
         with st.expander('Architecture Diagram', expanded=True): 
-            if st.session_state.ocr_tool == 'Claude 3 Vision':
+            if st.session_state.ocr_tool == 'Claude 3 Vision (Experimental)':
                 st.image("./assets/claude_3_vision_diagram.png", use_column_width=True)
+            elif st.session_state.ocr_tool == 'Claude 3 Vision & Textract (Experimental)':
+                st.image("./assets/claude_3_vision_text_diagram.png", use_column_width=True)
             else: 
                 st.image("./assets/textract_diagram.png", use_column_width=True)
 
