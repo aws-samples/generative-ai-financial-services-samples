@@ -199,11 +199,12 @@ def prepare_claude_3_vision_and_textract_prompt(query, encoded_images, all_text)
 
 def search_and_answer_pdf(file_path, query, ocr_tool, model_id):
     all_text = create_or_retrieve_textract_file(file_path)
-    if ocr_tool == "Claude 3 Vision":
+    assert ocr_tool in ["Claude 3 Vision (Experimental)", "Claude 3 Vision & Textract (Experimental)", "Textract"]
+    if ocr_tool == "Claude 3 Vision (Experimental)":
         print("Passing images to Claude 3 Vision as OCR")
         encoded_images = encode_pdf_to_base64(file_path)
         prompt, system_prompt = prepare_claude_3_vision_prompt(query, encoded_images)
-    elif ocr_tool == "Claude 3 Vision & Textract":
+    elif ocr_tool == "Claude 3 Vision & Textract (Experimental)":
         print("Passing images to Claude 3 Vision as OCR and Textract as OCR")
         encoded_images = encode_pdf_to_base64(file_path)
         prompt, system_prompt = prepare_claude_3_vision_and_textract_prompt(query, encoded_images, all_text)
@@ -211,8 +212,7 @@ def search_and_answer_pdf(file_path, query, ocr_tool, model_id):
         print("Passing images to Claude 3 using Textract as OCR")
         prompt, system_prompt = prepare_textract_prompt(query, all_text)
     else: 
-        print("Passing images to Claude 3 using Textract as OCR")
-        prompt, system_prompt = prepare_textract_prompt(query, all_text)
+        print("Not a valid OCR tool selection")
     response_text = call_claude_3_model(prompt, system_prompt, model_id)
     answer, ground_truth = extract_answer_and_ground_truth(response_text)
 
