@@ -303,7 +303,7 @@ You will be required to:
 
 ## Potential issues
 
-- Cloud9: You might experience issues withe memory and disk storage limitation with Cloud9, so please ensure you have the minimum requirements, if know you likely get the following:
+- Cloud9: You might experience issues withe memory and disk storage limitation with Cloud9, so please ensure you have the minimum requirements, if not you will likely get the following:
 
 ```bash
 Unpacking payload ...
