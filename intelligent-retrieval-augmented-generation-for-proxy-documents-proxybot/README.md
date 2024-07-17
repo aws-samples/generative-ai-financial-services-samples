@@ -361,7 +361,5 @@ python 04_run_cleanup.py
 [![contributors](https://contrib.rocks/image?repo=aws-samples/generative-ai-financial-services-samples&max=2000)](https://github.com/aws-samples/generative-ai-financial-services-samples/graphs/contributors)
 
 # Initial Security Reviews
-1. https://console.harmony.a2z.com/engsec-docs/content-security-review.html#What%20is%20a%20Content%20Security%20Review%7CContent
-2. https://gitlab.aws.dev/dbbegimh/automated-security-helper
 3. https://github.com/PyCQA/bandit
 4. https://bandit.readthedocs.io/en/latest/start.html
