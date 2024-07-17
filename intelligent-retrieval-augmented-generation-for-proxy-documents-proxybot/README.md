@@ -362,5 +362,5 @@ python 04_run_cleanup.py
 [![contributors](https://contrib.rocks/image?repo=aws-samples/generative-ai-financial-services-samples&max=2000)](https://github.com/aws-samples/generative-ai-financial-services-samples/graphs/contributors)
 
 # Initial Security Reviews
-3. https://github.com/PyCQA/bandit
-4. https://bandit.readthedocs.io/en/latest/start.html
+1. https://github.com/PyCQA/bandit
+2. https://bandit.readthedocs.io/en/latest/start.html
