@@ -268,7 +268,7 @@ You will be required to:
 ## Project Structure
 
 ```
-├─ fs_04_intelligent_rag_chatbot
+├─ intelligent-retrieval-augmented-generation-for-proxy-documents-proxybot
    ├── aoss/              
    ├── assets/
    ├── awsmanager/   
