@@ -10,7 +10,7 @@ Welcome to the Intelligent Retrieval-Augmented Generation (RAG) Chatbot - `Proxy
 4. An orchestrating workflow to get started for the `AOSS` with necessary permissions setting, extracted text files with summarization.
 5. Use of modern Generative AI tools like `streamlit` and `langchain`.
 
-## 2.0 Architecture (To be updated)
+## 2.0 Architecture
 
 ### 2.1 Overall Workflow Architecture
 ![Overall Workflow](assets/workflow.png)
@@ -21,7 +21,7 @@ Welcome to the Intelligent Retrieval-Augmented Generation (RAG) Chatbot - `Proxy
 2. Navigate to the working directory
 
 ```bash
-cd aws-generative-ai-financial-services-examples/fs_04_intelligent_rag_chatbot
+cd aws-generative-ai-financial-services-examples/intelligent-retrieval-augmented-generation-for-proxy-documents-proxybot
 ```
 
 3. It is recommended to use a virtual environment (preferably a `conda` virtual environment, due to some packages dependencies).
@@ -351,10 +351,11 @@ python 04_run_cleanup.py
 
 - [Dayo Oguntoyinbo](https://www.linkedin.com/in/iamdayo/)
 - [Kosta Belz](https://ca.linkedin.com/in/bkostya)
+- [Liam Knowles](https://www.linkedin.com/in/liam-knowles)
 - [Max Winter](https://www.linkedin.com/in/maxwinter/)
 - [Rubén Afonso](https://www.linkedin.com/in/rubenafonso/)
 - [Samuel Baruffi](https://www.linkedin.com/in/samuelbaruffi/)
-- [Liam Knowles](https://www.linkedin.com/in/liam-knowles)
+
 
 # Contributors
 
