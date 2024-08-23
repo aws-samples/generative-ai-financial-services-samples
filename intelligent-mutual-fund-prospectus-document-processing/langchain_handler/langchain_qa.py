@@ -21,13 +21,19 @@ def amazon_bedrock_models():
             "temperature": 0.0,
             "top_p": .999,
             "max_tokens": 2048,
-            "stop_sequences": ["\n\nHuman"],
+            "stop_sequences": [],
+        },      
+        "anthropic.claude-3-5-sonnet-20240620-v1:0": {
+            "temperature": 0.0,
+            "top_p": .999,
+            "max_tokens": 2048,
+            "stop_sequences": [],
         },      
         "anthropic.claude-3-haiku-20240307-v1:0": {
             "temperature": 0.0,
             "top_p": .999,
             "max_tokens": 2048,
-            "stop_sequences": ["\n\nHuman"],
+            "stop_sequences": [],
         },
         "anthropic.claude-v2": {
             "temperature": 0.0,
