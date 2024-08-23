@@ -43,6 +43,15 @@ Then you can set env. var as:
 export BUCKET_NAME=$BUCKET_NAME
 ```
 
+## Configure AWS command line and set credentials and region
+
+```
+aws configure
+and/or
+aws configure set region us-west-2
+```
+(or any other region where enabled Bedrock to run the Anrhtopic Claude models you want to test)
+
 ## Install
 
 ```bash
