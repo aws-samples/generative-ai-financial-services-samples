@@ -280,7 +280,7 @@ def main():
         if st.session_state.ocr_tool == "Textract":
             compatible_models = [model for model in list_llm_models()]
         else:
-            compatible_models = ['anthropic.claude-3-sonnet-20240229-v1:0', "anthropic.claude-3-haiku-20240307-v1:0"]
+            compatible_models = ["anthropic.claude-3-sonnet-20240229-v1:0", "anthropic.claude-3-5-sonnet-20240620-v1:0", "anthropic.claude-3-haiku-20240307-v1:0"]
     with col2: 
         model_id = st.selectbox("Select LLM", compatible_models)
 
