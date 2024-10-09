@@ -31,7 +31,7 @@ if "BUCKET_NAME" not in os.environ:
     raise Exception("S3 Bucket must be set for Textract processing. Please see README for more information")
 
 # Set page title
-st.set_page_config(page_title="FSI Q/A App", layout="wide")
+st.set_page_config(page_title="Q/A App", layout="wide")
 
 def synthesize_speech(text, voice_id):
     polly_client = boto3.Session().client('polly')
@@ -258,7 +258,7 @@ def main():
     # Ensure the environment is set up correctly
     check_env()
 
-    st.title("Intelligent Document Processing for FSI.")
+    st.title("Intelligent Document Processing.")
 
     # Select a language model from the available options
 
@@ -352,9 +352,9 @@ def main():
             label="Preview",
             value=query,
             label_visibility="collapsed",
-            height=80,
+            height=500,
             disabled=False,
-            max_chars=1000,
+            max_chars=100000,
         )
         print("\n\nQ:", final_query)
 
