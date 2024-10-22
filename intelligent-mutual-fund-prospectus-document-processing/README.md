@@ -17,13 +17,16 @@ Welcome to our state-of-the-art Intelligent Mutual Fund Prospectus Document Proc
 
 # Project Diagram 📊 
 
-Textract OCR passing text to Claude:
+## Textract OCR passing text to Claude:
+
 ![Project Diagram](assets/textract_diagram.png)
 
-Claude Vision alone:
+## Claude Vision alone:
+
 ![Project Diagram](assets/claude_3_vision_diagram.png)
 
-Textract OCR passing text to Claude Vision:
+## Textract OCR passing text to Claude Vision:
+
 ![Project Diagram](assets/claude_3_vision_text_diagram.png)
 
 # Run Locally 💻
