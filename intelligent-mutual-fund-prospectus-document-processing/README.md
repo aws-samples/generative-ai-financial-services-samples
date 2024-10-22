@@ -13,9 +13,18 @@ Welcome to our state-of-the-art Intelligent Mutual Fund Prospectus Document Proc
 - **Pre-summarization**: Ensure detailed and context-aware responses every time.
 - **Seamless Integration**: Integrated with tools like Langchain, Streamlit, and Bedrock for a seamless experience.
 
+
+
 # Project Diagram 📊 
 
+Textract OCR passing text to Claude:
+![Project Diagram](assets/textract_diagram.png)
+
+Claude Vision alone:
 ![Project Diagram](assets/claude_3_vision_diagram.png)
+
+Textract OCR passing text to Claude Vision:
+![Project Diagram](assets/claude_3_vision_text_diagram.png)
 
 # Run Locally 💻
 
