@@ -81,7 +81,7 @@ class FileUploader:
             logging.error(f"Failed to access S3 bucket {self.bucket_name}: {str(e)}")
             error_code = int(e.response["Error"]["Code"])
             if error_code == 404:
-                self.s3.create_bucket(Bucket=self.bucket_name)
+                self.s3.create_bucket(Bucket=self.bucket_name, CreateBucketConfiguration={'LocationConstraint': self.session.region_name})
             else:
                 raise
 
