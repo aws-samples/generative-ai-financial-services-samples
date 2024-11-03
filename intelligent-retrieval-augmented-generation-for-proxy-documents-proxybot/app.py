@@ -78,7 +78,7 @@ def on_document_date_change():
 
 
 if "selected_model" not in st.session_state:
-    st.session_state.selected_model = "anthropic.claude-v2:1"
+    st.session_state.selected_model = "anthropic.claude-3-5-sonnet-20241022-v2:0"
 
 
 def on_model_change():
