@@ -3,7 +3,7 @@ import datetime
 import uuid
 import random
 import configparser
-
+import boto3
 
 def check_folder_exists(folder):
     if not os.path.exists(folder):
@@ -108,6 +108,11 @@ colour_dict = {"c_red": "\x1b[31m", "c_green": "\033[92m", "c_norm": "\033[0m"}
 
 DISAMBIGUITY_CLAUSE = False
 AWS_DEFAULT_REGION = config["aws_params"]["region_name"]
+boto3.setup_default_session(region_name=AWS_DEFAULT_REGION)
+print(f"************* SET BOTO3 Default region: {boto3.DEFAULT_SESSION.region_name} *****************")
+aws_session = boto3.Session()
+session_region = aws_session.region_name
+print(f"*************  BOTO3 region: {session_region} *****************")
 
 rd = random.Random()
 rd.seed(42)
