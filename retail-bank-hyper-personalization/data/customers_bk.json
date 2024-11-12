@@ -1,0 +1,1029 @@
+[
+  {
+    "id": 1,
+    "name": "Emily Chen",
+    "demographics": {
+      "age": 28,
+      "gender": "Female",
+      "annualIncome": 65000,
+      "educationLevel": "Undergraduate",
+      "maritalStatus": "Single",
+      "familySize": 1
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Weekly",
+        "channels": [
+          "Mobile App",
+          "ATM"
+        ],
+        "transactionTypes": [
+          "Debit Card",
+          "P2P Transfer"
+        ],
+        "transactionAmounts": "Medium",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account",
+        "Credit Card"
+      ],
+      "lastTransactionDate": "2024-07-20",
+      "numberOfTransactionInThreeMonths": 36,
+      "numberOfTransactionInSixMonths": 72,
+      "numberOfTransactionTTM": 144
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Savings",
+        "Investment"
+      ],
+      "riskTolerance": 3
+    },
+    "customerLifetimeValue": {
+      "tenure": 4,
+      "totalAssetsUnderManagement": 45000,
+      "profitability": 3
+    },
+    "lifeStage": "Young Professional",
+    "career": "Marketing"
+  },
+  {
+    "id": 2,
+    "name": "Michael Wong",
+    "demographics": {
+      "age": 42,
+      "gender": "Male",
+      "annualIncome": 120000,
+      "educationLevel": "Master",
+      "maritalStatus": "Married",
+      "familySize": 4
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Daily",
+        "channels": [
+          "Online Banking",
+          "Mobile App"
+        ],
+        "transactionTypes": [
+          "Credit Card",
+          "Wire Transfer"
+        ],
+        "transactionAmounts": "High",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account",
+        "Credit Card",
+        "Mortgage",
+        "Investments"
+      ],
+      "lastTransactionDate": "2024-07-21",
+      "numberOfTransactionInThreeMonths": 90,
+      "numberOfTransactionInSixMonths": 180,
+      "numberOfTransactionTTM": 360
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Investment",
+        "Debt Management",
+        "Legacy and Estate Planning"
+      ],
+      "riskTolerance": 4
+    },
+    "customerLifetimeValue": {
+      "tenure": 12,
+      "totalAssetsUnderManagement": 750000,
+      "profitability": 5
+    },
+    "lifeStage": "Family",
+    "career": "Finance"
+  },
+  {
+    "id": 3,
+    "name": "Patricia Lee",
+    "demographics": {
+      "age": 62,
+      "gender": "Female",
+      "annualIncome": 85000,
+      "educationLevel": "Advanced Level",
+      "maritalStatus": "Divorced",
+      "familySize": 2
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Monthly",
+        "channels": [
+          "Branch",
+          "Online Banking"
+        ],
+        "transactionTypes": [
+          "Check",
+          "Bill Pay"
+        ],
+        "transactionAmounts": "Medium",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account",
+        "Investments"
+      ],
+      "lastTransactionDate": "2023-12-15",
+      "numberOfTransactionInThreeMonths": 0,
+      "numberOfTransactionInSixMonths": 6,
+      "numberOfTransactionTTM": 12
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Savings",
+        "Major Life Event"
+      ],
+      "riskTolerance": 2
+    },
+    "customerLifetimeValue": {
+      "tenure": 25,
+      "totalAssetsUnderManagement": 350000,
+      "profitability": 4
+    },
+    "lifeStage": "Pre-retiree",
+    "career": "Education"
+  },
+  {
+    "id": 4,
+    "name": "Jason Tan",
+    "demographics": {
+      "age": 22,
+      "gender": "Male",
+      "annualIncome": 30000,
+      "educationLevel": "Undergraduate",
+      "maritalStatus": "Single",
+      "familySize": 1
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Weekly",
+        "channels": [
+          "Mobile App"
+        ],
+        "transactionTypes": [
+          "Debit Card",
+          "P2P Transfer"
+        ],
+        "transactionAmounts": "Low",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Credit Card"
+      ],
+      "lastTransactionDate": "2024-07-21",
+      "numberOfTransactionInThreeMonths": 36,
+      "numberOfTransactionInSixMonths": 72,
+      "numberOfTransactionTTM": 144
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Savings",
+        "Debt Management"
+      ],
+      "riskTolerance": 4
+    },
+    "customerLifetimeValue": {
+      "tenure": 2,
+      "totalAssetsUnderManagement": 5000,
+      "profitability": 2
+    },
+    "lifeStage": "Student",
+    "career": "Student"
+  },
+  {
+    "id": 5,
+    "name": "Sarah Lim",
+    "demographics": {
+      "age": 55,
+      "gender": "Female",
+      "annualIncome": 150000,
+      "educationLevel": "Doctorate",
+      "maritalStatus": "Married",
+      "familySize": 3
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Daily",
+        "channels": [
+          "Online Banking",
+          "Mobile App"
+        ],
+        "transactionTypes": [
+          "Credit Card",
+          "Wire Transfer",
+          "Investments"
+        ],
+        "transactionAmounts": "High",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account",
+        "Credit Card",
+        "Mortgage",
+        "Investments",
+        "Loans"
+      ],
+      "lastTransactionDate": "2024-07-21",
+      "numberOfTransactionInThreeMonths": 90,
+      "numberOfTransactionInSixMonths": 180,
+      "numberOfTransactionTTM": 360
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Investment",
+        "Legacy and Estate Planning"
+      ],
+      "riskTolerance": 5
+    },
+    "customerLifetimeValue": {
+      "tenure": 20,
+      "totalAssetsUnderManagement": 1200000,
+      "profitability": 5
+    },
+    "lifeStage": "Pre-retiree",
+    "career": "Healthcare"
+  },
+  {
+    "id": 6,
+    "name": "David Ng",
+    "demographics": {
+      "age": 35,
+      "gender": "Male",
+      "annualIncome": 80000,
+      "educationLevel": "Master",
+      "maritalStatus": "Married",
+      "familySize": 3
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Weekly",
+        "channels": [
+          "Mobile App",
+          "ATM"
+        ],
+        "transactionTypes": [
+          "Debit Card",
+          "Credit Card",
+          "Bill Pay"
+        ],
+        "transactionAmounts": "Medium",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account",
+        "Credit Card",
+        "Mortgage"
+      ],
+      "lastTransactionDate": "2023-09-15",
+      "numberOfTransactionInThreeMonths": 0,
+      "numberOfTransactionInSixMonths": 0,
+      "numberOfTransactionTTM": 36
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Savings",
+        "Investment",
+        "Debt Management"
+      ],
+      "riskTolerance": 3
+    },
+    "customerLifetimeValue": {
+      "tenure": 8,
+      "totalAssetsUnderManagement": 180000,
+      "profitability": 4
+    },
+    "lifeStage": "Family",
+    "career": "Engineering"
+  },
+  {
+    "id": 7,
+    "name": "Robert Koh",
+    "demographics": {
+      "age": 70,
+      "gender": "Male",
+      "annualIncome": 60000,
+      "educationLevel": "Secondary",
+      "maritalStatus": "Widowed",
+      "familySize": 1
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Monthly",
+        "channels": [
+          "Branch",
+          "ATM"
+        ],
+        "transactionTypes": [
+          "Check",
+          "Cash Withdrawal"
+        ],
+        "transactionAmounts": "Medium",
+        "payrollTransactions": false
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account"
+      ],
+      "lastTransactionDate": "2022-07-10",
+      "numberOfTransactionInThreeMonths": 0,
+      "numberOfTransactionInSixMonths": 0,
+      "numberOfTransactionTTM": 0
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Legacy and Estate Planning"
+      ],
+      "riskTolerance": 1
+    },
+    "customerLifetimeValue": {
+      "tenure": 40,
+      "totalAssetsUnderManagement": 250000,
+      "profitability": 3
+    },
+    "lifeStage": "Retiree",
+    "career": "Retired"
+  },
+  {
+    "id": 8,
+    "name": "Jennifer Teo",
+    "demographics": {
+      "age": 32,
+      "gender": "Female",
+      "annualIncome": 95000,
+      "educationLevel": "Master",
+      "maritalStatus": "Single",
+      "familySize": 1
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Daily",
+        "channels": [
+          "Mobile App",
+          "Online Banking"
+        ],
+        "transactionTypes": [
+          "Credit Card",
+          "P2P Transfer",
+          "Investments"
+        ],
+        "transactionAmounts": "High",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account",
+        "Credit Card",
+        "Investments"
+      ],
+      "lastTransactionDate": "2024-07-21",
+      "numberOfTransactionInThreeMonths": 90,
+      "numberOfTransactionInSixMonths": 180,
+      "numberOfTransactionTTM": 360
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Investment",
+        "Major Life Event"
+      ],
+      "riskTolerance": 4
+    },
+    "customerLifetimeValue": {
+      "tenure": 6,
+      "totalAssetsUnderManagement": 220000,
+      "profitability": 4
+    },
+    "lifeStage": "Young Professional",
+    "career": "Information Technology"
+  },
+  {
+    "id": 9,
+    "name": "Daniel Goh",
+    "demographics": {
+      "age": 45,
+      "gender": "Male",
+      "annualIncome": 110000,
+      "educationLevel": "Undergraduate",
+      "maritalStatus": "Married",
+      "familySize": 5
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Weekly",
+        "channels": [
+          "Online Banking",
+          "Branch"
+        ],
+        "transactionTypes": [
+          "Credit Card",
+          "Wire Transfer",
+          "Loans"
+        ],
+        "transactionAmounts": "High",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account",
+        "Credit Card",
+        "Mortgage",
+        "Loans"
+      ],
+      "lastTransactionDate": "2024-05-19",
+      "numberOfTransactionInThreeMonths": 36,
+      "numberOfTransactionInSixMonths": 72,
+      "numberOfTransactionTTM": 144
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Debt Management",
+        "Savings",
+        "Investment"
+      ],
+      "riskTolerance": 3
+    },
+    "customerLifetimeValue": {
+      "tenure": 15,
+      "totalAssetsUnderManagement": 450000,
+      "profitability": 4
+    },
+    "lifeStage": "Family",
+    "career": "Sales"
+  },
+  {
+    "id": 10,
+    "name": "Linda Tan",
+    "demographics": {
+      "age": 50,
+      "gender": "Female",
+      "annualIncome": 200000,
+      "educationLevel": "Doctorate",
+      "maritalStatus": "Married",
+      "familySize": 2
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Daily",
+        "channels": [
+          "Mobile App",
+          "Online Banking"
+        ],
+        "transactionTypes": [
+          "Credit Card",
+          "Wire Transfer",
+          "Investments"
+        ],
+        "transactionAmounts": "Very High",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account",
+        "Credit Card",
+        "Mortgage",
+        "Investments",
+        "Loans"
+      ],
+      "lastTransactionDate": "2024-07-21",
+      "numberOfTransactionInThreeMonths": 90,
+      "numberOfTransactionInSixMonths": 180,
+      "numberOfTransactionTTM": 360
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Investment",
+        "Legacy and Estate Planning",
+        "Major Life Event"
+      ],
+      "riskTolerance": 5
+    },
+    "customerLifetimeValue": {
+      "tenure": 18,
+      "totalAssetsUnderManagement": 1800000,
+      "profitability": 5
+    },
+    "lifeStage": "Pre-retiree",
+    "career": "Executive"
+  },
+  {
+    "id": 11,
+    "name": "Kevin Lim",
+    "demographics": {
+      "age": 29,
+      "gender": "Male",
+      "annualIncome": 70000,
+      "educationLevel": "Undergraduate",
+      "maritalStatus": "Single",
+      "familySize": 1
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Daily",
+        "channels": [
+          "Mobile App",
+          "Online Banking"
+        ],
+        "transactionTypes": [
+          "Debit Card",
+          "Credit Card",
+          "P2P Transfer"
+        ],
+        "transactionAmounts": "Medium",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account",
+        "Credit Card"
+      ],
+      "lastTransactionDate": "2024-07-21",
+      "numberOfTransactionInThreeMonths": 90,
+      "numberOfTransactionInSixMonths": 180,
+      "numberOfTransactionTTM": 360
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Savings",
+        "Investment"
+      ],
+      "riskTolerance": 4
+    },
+    "customerLifetimeValue": {
+      "tenure": 5,
+      "totalAssetsUnderManagement": 55000,
+      "profitability": 3
+    },
+    "lifeStage": "Young Professional",
+    "career": "Software Developer"
+  },
+  {
+    "id": 12,
+    "name": "Sophia Zhang",
+    "demographics": {
+      "age": 38,
+      "gender": "Female",
+      "annualIncome": 105000,
+      "educationLevel": "Master",
+      "maritalStatus": "Married",
+      "familySize": 3
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Weekly",
+        "channels": [
+          "Online Banking",
+          "Branch"
+        ],
+        "transactionTypes": [
+          "Credit Card",
+          "Wire Transfer"
+        ],
+        "transactionAmounts": "High",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account",
+        "Credit Card",
+        "Mortgage",
+        "Investments"
+      ],
+      "lastTransactionDate": "2024-07-20",
+      "numberOfTransactionInThreeMonths": 36,
+      "numberOfTransactionInSixMonths": 72,
+      "numberOfTransactionTTM": 144
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Investment",
+        "Debt Management"
+      ],
+      "riskTolerance": 3
+    },
+    "customerLifetimeValue": {
+      "tenure": 10,
+      "totalAssetsUnderManagement": 320000,
+      "profitability": 4
+    },
+    "lifeStage": "Family",
+    "career": "Project Manager"
+  },
+  {
+    "id": 13,
+    "name": "Raymond Teo",
+    "demographics": {
+      "age": 58,
+      "gender": "Male",
+      "annualIncome": 130000,
+      "educationLevel": "Undergraduate",
+      "maritalStatus": "Married",
+      "familySize": 2
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Daily",
+        "channels": [
+          "Mobile App",
+          "Online Banking"
+        ],
+        "transactionTypes": [
+          "Credit Card",
+          "Investments"
+        ],
+        "transactionAmounts": "High",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account",
+        "Credit Card",
+        "Investments"
+      ],
+      "lastTransactionDate": "2024-07-21",
+      "numberOfTransactionInThreeMonths": 90,
+      "numberOfTransactionInSixMonths": 180,
+      "numberOfTransactionTTM": 360
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Investment",
+        "Legacy and Estate Planning"
+      ],
+      "riskTolerance": 4
+    },
+    "customerLifetimeValue": {
+      "tenure": 22,
+      "totalAssetsUnderManagement": 950000,
+      "profitability": 5
+    },
+    "lifeStage": "Pre-retiree",
+    "career": "Senior Executive"
+  },
+  {
+    "id": 14,
+    "name": "Michelle Tan",
+    "demographics": {
+      "age": 26,
+      "gender": "Female",
+      "annualIncome": 55000,
+      "educationLevel": "Undergraduate",
+      "maritalStatus": "Single",
+      "familySize": 1
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Weekly",
+        "channels": [
+          "Mobile App"
+        ],
+        "transactionTypes": [
+          "Debit Card",
+          "P2P Transfer"
+        ],
+        "transactionAmounts": "Low",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account"
+      ],
+      "lastTransactionDate": "2024-07-19",
+      "numberOfTransactionInThreeMonths": 36,
+      "numberOfTransactionInSixMonths": 72,
+      "numberOfTransactionTTM": 144
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Savings",
+        "Debt Management"
+      ],
+      "riskTolerance": 2
+    },
+    "customerLifetimeValue": {
+      "tenure": 3,
+      "totalAssetsUnderManagement": 25000,
+      "profitability": 2
+    },
+    "lifeStage": "Young Professional",
+    "career": "Marketing Associate"
+  },
+  {
+    "id": 15,
+    "name": "Andrew Loh",
+    "demographics": {
+      "age": 47,
+      "gender": "Male",
+      "annualIncome": 140000,
+      "educationLevel": "Master",
+      "maritalStatus": "Married",
+      "familySize": 4
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Daily",
+        "channels": [
+          "Online Banking",
+          "Mobile App"
+        ],
+        "transactionTypes": [
+          "Credit Card",
+          "Wire Transfer",
+          "Investments"
+        ],
+        "transactionAmounts": "High",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account",
+        "Credit Card",
+        "Mortgage",
+        "Investments",
+        "Loans"
+      ],
+      "lastTransactionDate": "2024-07-21",
+      "numberOfTransactionInThreeMonths": 90,
+      "numberOfTransactionInSixMonths": 180,
+      "numberOfTransactionTTM": 360
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Investment",
+        "Legacy and Estate Planning"
+      ],
+      "riskTolerance": 4
+    },
+    "customerLifetimeValue": {
+      "tenure": 16,
+      "totalAssetsUnderManagement": 780000,
+      "profitability": 5
+    },
+    "lifeStage": "Family",
+    "career": "Finance Director"
+  },
+  {
+    "id": 16,
+    "name": "Grace Wong",
+    "demographics": {
+      "age": 34,
+      "gender": "Female",
+      "annualIncome": 85000,
+      "educationLevel": "Master",
+      "maritalStatus": "Single",
+      "familySize": 1
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Weekly",
+        "channels": [
+          "Mobile App",
+          "Online Banking"
+        ],
+        "transactionTypes": [
+          "Credit Card",
+          "P2P Transfer"
+        ],
+        "transactionAmounts": "Medium",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account",
+        "Credit Card",
+        "Investments"
+      ],
+      "lastTransactionDate": "2024-07-20",
+      "numberOfTransactionInThreeMonths": 36,
+      "numberOfTransactionInSixMonths": 72,
+      "numberOfTransactionTTM": 144
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Investment",
+        "Major Life Event"
+      ],
+      "riskTolerance": 3
+    },
+    "customerLifetimeValue": {
+      "tenure": 7,
+      "totalAssetsUnderManagement": 180000,
+      "profitability": 4
+    },
+    "lifeStage": "Young Professional",
+    "career": "Data Scientist"
+  },
+  {
+    "id": 17,
+    "name": "Thomas Lee",
+    "demographics": {
+      "age": 65,
+      "gender": "Male",
+      "annualIncome": 90000,
+      "educationLevel": "Undergraduate",
+      "maritalStatus": "Married",
+      "familySize": 2
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Monthly",
+        "channels": [
+          "Branch",
+          "Online Banking"
+        ],
+        "transactionTypes": [
+          "Check",
+          "Bill Pay"
+        ],
+        "transactionAmounts": "Medium",
+        "payrollTransactions": false
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account",
+        "Investments"
+      ],
+      "lastTransactionDate": "2024-06-30",
+      "numberOfTransactionInThreeMonths": 3,
+      "numberOfTransactionInSixMonths": 6,
+      "numberOfTransactionTTM": 12
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Legacy and Estate Planning",
+        "Savings"
+      ],
+      "riskTolerance": 2
+    },
+    "customerLifetimeValue": {
+      "tenure": 30,
+      "totalAssetsUnderManagement": 420000,
+      "profitability": 4
+    },
+    "lifeStage": "Retiree",
+    "career": "Retired (Former Engineer)"
+  },
+  {
+    "id": 18,
+    "name": "Olivia Ng",
+    "demographics": {
+      "age": 31,
+      "gender": "Female",
+      "annualIncome": 78000,
+      "educationLevel": "Master",
+      "maritalStatus": "Married",
+      "familySize": 3
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Daily",
+        "channels": [
+          "Mobile App",
+          "ATM"
+        ],
+        "transactionTypes": [
+          "Debit Card",
+          "Credit Card"
+        ],
+        "transactionAmounts": "Medium",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account",
+        "Credit Card",
+        "Mortgage"
+      ],
+      "lastTransactionDate": "2024-07-21",
+      "numberOfTransactionInThreeMonths": 90,
+      "numberOfTransactionInSixMonths": 180,
+      "numberOfTransactionTTM": 360
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Savings",
+        "Debt Management"
+      ],
+      "riskTolerance": 3
+    },
+    "customerLifetimeValue": {
+      "tenure": 6,
+      "totalAssetsUnderManagement": 120000,
+      "profitability": 3
+    },
+    "lifeStage": "Family",
+    "career": "Human Resources Manager"
+  },
+  {
+    "id": 19,
+    "name": "Benjamin Tan",
+    "demographics": {
+      "age": 40,
+      "gender": "Male",
+      "annualIncome": 115000,
+      "educationLevel": "Doctorate",
+      "maritalStatus": "Married",
+      "familySize": 4
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Daily",
+        "channels": [
+          "Online Banking",
+          "Mobile App"
+        ],
+        "transactionTypes": [
+          "Credit Card",
+          "Wire Transfer",
+          "Investments"
+        ],
+        "transactionAmounts": "High",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account",
+        "Credit Card",
+        "Mortgage",
+        "Investments"
+      ],
+      "lastTransactionDate": "2024-07-21",
+      "numberOfTransactionInThreeMonths": 90,
+      "numberOfTransactionInSixMonths": 180,
+      "numberOfTransactionTTM": 360
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Investment",
+        "Legacy and Estate Planning"
+      ],
+      "riskTolerance": 4
+    },
+    "customerLifetimeValue": {
+      "tenure": 14,
+      "totalAssetsUnderManagement": 680000,
+      "profitability": 5
+    },
+    "lifeStage": "Family",
+    "career": "University Professor"
+  },
+  {
+    "id": 20,
+    "name": "Jessica Lim",
+    "demographics": {
+      "age": 27,
+      "gender": "Female",
+      "annualIncome": 62000,
+      "educationLevel": "Undergraduate",
+      "maritalStatus": "Single",
+      "familySize": 1
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Weekly",
+        "channels": [
+          "Mobile App"
+        ],
+        "transactionTypes": [
+          "Debit Card",
+          "P2P Transfer"
+        ],
+        "transactionAmounts": "Low",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account",
+        "Credit Card"
+      ],
+      "lastTransactionDate": "2024-07-20",
+      "numberOfTransactionInThreeMonths": 36,
+      "numberOfTransactionInSixMonths": 72,
+      "numberOfTransactionTTM": 144
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Savings",
+        "Investment"
+      ],
+      "riskTolerance": 3
+    },
+    "customerLifetimeValue": {
+      "tenure": 4,
+      "totalAssetsUnderManagement": 40000,
+      "profitability": 2
+    },
+    "lifeStage": "Young Professional",
+    "career": "Graphic Designer"
+  }
+]

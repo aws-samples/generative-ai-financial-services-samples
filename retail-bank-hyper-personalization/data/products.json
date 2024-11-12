@@ -1,0 +1,230 @@
+[
+    {
+        "category": "💵 Deposit",
+        "products": [
+            {
+                "name": "Fixed Deposit",
+                "description": "Accepts a wide range of currencies including HKD, RMB and other foreign currencies, enabling you to enjoy high interest earning with financial flexibility.",
+                "features": [
+                    "High interest rates",
+                    "Flexible tenors ranging from 1 month to 5 years",
+                    "Automatic renewal options"
+                ],
+                "benefits": [
+                    "Secure and stable returns",
+                    "Easy management through online banking",
+                    "Option to withdraw interest monthly"
+                ],
+                "eligibility": "Minimum deposit of HKD 10,000",
+                "specialOffers": "Extra 0.5% interest rate for deposits over HKD 500,000"
+            },
+            {
+                "name": "Statement Savings Account",
+                "description": "Provides you with HK dollar and US dollar accounts, allows you to view your financial status at a glance and use your savings flexibly for transactions and withdrawals.",
+                "features": [
+                    "Multi-currency support",
+                    "Monthly statements",
+                    "No minimum balance requirement"
+                ],
+                "benefits": [
+                    "Easy access to funds",
+                    "Earn interest on your savings",
+                    "Convenient online and mobile banking"
+                ],
+                "eligibility": "Available to all customers",
+                "specialOffers": "No service fee for the first year"
+            },
+            {
+                "name": "Target Savings Plan",
+                "description": "Assists you achieve your savings goal with steady wealth growth. Features include flexible choice of monthly savings amount and tenors, different tenor options, fixed interest rate upon account opening, and hassle-free installment payment and maturity payment through direct debit authorization.",
+                "features": [
+                    "Flexible monthly savings amount",
+                    "Fixed interest rate",
+                    "Direct debit authorization"
+                ],
+                "benefits": [
+                    "Achieve your savings goals",
+                    "Predictable returns",
+                    "Convenient and automated savings"
+                ],
+                "eligibility": "Minimum monthly savings of HKD 500",
+                "specialOffers": "Bonus interest for consistent savings over 12 months"
+            }
+        ]
+    },
+    {
+        "category": "💰 Loans",
+        "products": [
+            {
+                "name": "Easy Cash Personal Loan",
+                "description": "Accepts all types of income proof, providing extra cash simply by providing any kind of the latest 1-month documentary income proof.",
+                "features": [
+                    "Flexible repayment terms",
+                    "Competitive interest rates",
+                    "Quick approval process"
+                ],
+                "benefits": [
+                    "Access to extra cash when needed",
+                    "Simple application process",
+                    "No collateral required"
+                ],
+                "eligibility": "Minimum monthly income of HKD 10,000",
+                "specialOffers": "0% interest for the first 3 months"
+            },
+            {
+                "name": "Perfect Fit Personal Loan",
+                "description": "Offers preliminary approval result in as fast as 30 minutes. Loan amount up to 16 times of monthly salary or a maximum of HK$3,000,000.",
+                "features": [
+                    "High loan amount",
+                    "Fast approval",
+                    "Flexible repayment options"
+                ],
+                "benefits": [
+                    "Large loan amounts for big expenses",
+                    "Quick access to funds",
+                    "Customizable repayment plans"
+                ],
+                "eligibility": "Minimum monthly income of HKD 20,000",
+                "specialOffers": "Reduced processing fee for online applications"
+            },
+            {
+                "name": "Balance Transfer Personal Loan",
+                "description": "Provides 1-on-1 service consultation, helping you settle consolidated debts and interests in one go.",
+                "features": [
+                    "Debt consolidation",
+                    "Lower interest rates",
+                    "Personalized service"
+                ],
+                "benefits": [
+                    "Simplify your finances",
+                    "Save on interest payments",
+                    "Expert financial advice"
+                ],
+                "eligibility": "Existing debts with other financial institutions",
+                "specialOffers": "No processing fee for balance transfers over HKD 50,000"
+            },
+            {
+                "name": "Mortgage Services",
+                "description": "Comprehensive mortgage plans for first-time home buyers, property upgraders or property investors. Includes Preferential Mortgage Plan and 90% Mortgage Plan with various features and benefits.",
+                "features": [
+                    "High loan-to-value ratio",
+                    "Competitive interest rates",
+                    "Flexible repayment terms"
+                ],
+                "benefits": [
+                    "Affordable home ownership",
+                    "Tailored mortgage solutions",
+                    "Expert advice and support"
+                ],
+                "eligibility": "Minimum down payment of 10%",
+                "specialOffers": "Cash rebate for new mortgage customers"
+            }
+        ]
+    },
+    {
+        "category": "💳 Credit Card",
+        "products": [
+            {
+                "name": "Visa Infinite Card",
+                "description": "Offers an extraordinary travel experience with up to 20 times bonus points for designated overseas transactions and exclusive travel benefits.",
+                "features": [
+                    "High reward points",
+                    "Travel insurance",
+                    "Airport lounge access"
+                ],
+                "benefits": [
+                    "Earn points faster",
+                    "Comprehensive travel protection",
+                    "Luxury travel experiences"
+                ],
+                "eligibility": "Minimum annual income of HKD 500,000",
+                "specialOffers": "50,000 bonus points upon first use"
+            },
+            {
+                "name": "Platinum Card",
+                "description": "Lets you enjoy spending rebates and easily earn points for online or overseas purchases, which can be redeemed for fabulous gifts.",
+                "features": [
+                    "Cashback on purchases",
+                    "Reward points",
+                    "Exclusive offers"
+                ],
+                "benefits": [
+                    "Save money on everyday spending",
+                    "Redeem points for gifts",
+                    "Access to special promotions"
+                ],
+                "eligibility": "Minimum annual income of HKD 200,000",
+                "specialOffers": "5% cashback on all purchases for the first 3 months"
+            }
+        ]
+    },
+    {
+        "category": "🩺 Insurance",
+        "products": [
+            {
+                "name": "Forest Insurance Plan",
+                "description": "Provides multiple potential returns for long-term wealth accumulation, with policy split option and whole life protection. Offers guaranteed interest rate of 5.5% per annum for annual and premium prepayment option.",
+                "features": [
+                    "Guaranteed interest rate",
+                    "Whole life protection",
+                    "Policy split option"
+                ],
+                "benefits": [
+                    "Secure long-term returns",
+                    "Comprehensive life coverage",
+                    "Flexible policy management"
+                ],
+                "eligibility": "Available to individuals aged 18-65",
+                "specialOffers": "Extra 1% interest for premium prepayment"
+            },
+            {
+                "name": "Prosperity Booster Whole Life Plan",
+                "description": "A participating life insurance plan that propels long-term savings, offering potentially high returns for wealth accumulation and legacy planning.",
+                "features": [
+                    "Participating policy",
+                    "High potential returns",
+                    "Legacy planning"
+                ],
+                "benefits": [
+                    "Grow your wealth",
+                    "Secure your family's future",
+                    "Flexible premium payment options"
+                ],
+                "eligibility": "Available to individuals aged 18-60",
+                "specialOffers": "First-year premium discount"
+            },
+            {
+                "name": "Personal Accident Insurance Plan",
+                "description": "Provides worldwide protection for you and your family in case of accidents, offering financial support at an attractive premium cost.",
+                "features": [
+                    "Worldwide coverage",
+                    "High benefit limits",
+                    "Affordable premiums"
+                ],
+                "benefits": [
+                    "Peace of mind",
+                    "Financial support in emergencies",
+                    "Cost-effective protection"
+                ],
+                "eligibility": "Available to individuals aged 18-70",
+                "specialOffers": "10% discount for family coverage"
+            },
+            {
+                "name": "HomeHelperPlus Insurance Plan",
+                "description": "Offers comprehensive cover for you and your domestic helper, including legal liability protection, repatriation costs, and service interruption subsidy.",
+                "features": [
+                    "Legal liability protection",
+                    "Repatriation costs",
+                    "Service interruption subsidy"
+                ],
+                "benefits": [
+                    "Protect your domestic helper",
+                    "Financial support for unexpected events",
+                    "Peace of mind"
+                ],
+                "eligibility": "Available to all employers of domestic helpers",
+                "specialOffers": "No premium increase for the first 2 years"
+            }
+        ]
+    }
+]

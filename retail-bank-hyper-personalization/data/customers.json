@@ -1,0 +1,155 @@
+[
+  {
+    "id": 1,
+    "name": "Emily Chen",
+    "demographics": {
+      "age": 28,
+      "gender": "Female",
+      "annualIncome": 65000,
+      "educationLevel": "Undergraduate",
+      "maritalStatus": "Single",
+      "familySize": 1
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Weekly",
+        "channels": [
+          "Mobile App",
+          "ATM"
+        ],
+        "transactionTypes": [
+          "Debit Card",
+          "P2P Transfer"
+        ],
+        "transactionAmounts": "Medium",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account",
+        "Credit Card"
+      ],
+      "lastTransactionDate": "2024-07-20",
+      "numberOfTransactionInThreeMonths": 36,
+      "numberOfTransactionInSixMonths": 72,
+      "numberOfTransactionTTM": 144
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Savings",
+        "Investment"
+      ],
+      "riskTolerance": 3
+    },
+    "customerLifetimeValue": {
+      "tenure": 4,
+      "totalAssetsUnderManagement": 45000,
+      "profitability": 3
+    },
+    "lifeStage": "Young Professional",
+    "career": "Marketing"
+  },
+  {
+    "id": 2,
+    "name": "Michael Wong",
+    "demographics": {
+      "age": 42,
+      "gender": "Male",
+      "annualIncome": 120000,
+      "educationLevel": "Master",
+      "maritalStatus": "Married",
+      "familySize": 4
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Daily",
+        "channels": [
+          "Online Banking",
+          "Mobile App"
+        ],
+        "transactionTypes": [
+          "Credit Card",
+          "Wire Transfer"
+        ],
+        "transactionAmounts": "High",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account",
+        "Credit Card",
+        "Mortgage",
+        "Investments"
+      ],
+      "lastTransactionDate": "2024-07-21",
+      "numberOfTransactionInThreeMonths": 90,
+      "numberOfTransactionInSixMonths": 180,
+      "numberOfTransactionTTM": 360
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Investment",
+        "Debt Management",
+        "Legacy and Estate Planning"
+      ],
+      "riskTolerance": 4
+    },
+    "customerLifetimeValue": {
+      "tenure": 12,
+      "totalAssetsUnderManagement": 750000,
+      "profitability": 5
+    },
+    "lifeStage": "Family",
+    "career": "Finance"
+  },
+  {
+    "id": 3,
+    "name": "Patricia Lee",
+    "demographics": {
+      "age": 62,
+      "gender": "Female",
+      "annualIncome": 85000,
+      "educationLevel": "Advanced Level",
+      "maritalStatus": "Divorced",
+      "familySize": 2
+    },
+    "behavioral": {
+      "transactionPatterns": {
+        "frequency": "Monthly",
+        "channels": [
+          "Branch",
+          "Online Banking"
+        ],
+        "transactionTypes": [
+          "Check",
+          "Bill Pay"
+        ],
+        "transactionAmounts": "Medium",
+        "payrollTransactions": true
+      },
+      "productUsage": [
+        "Checking Account",
+        "Savings Account",
+        "Investments"
+      ],
+      "lastTransactionDate": "2023-12-15",
+      "numberOfTransactionInThreeMonths": 0,
+      "numberOfTransactionInSixMonths": 6,
+      "numberOfTransactionTTM": 12
+    },
+    "psychographics": {
+      "financialGoals": [
+        "Savings",
+        "Major Life Event"
+      ],
+      "riskTolerance": 2
+    },
+    "customerLifetimeValue": {
+      "tenure": 25,
+      "totalAssetsUnderManagement": 350000,
+      "profitability": 4
+    },
+    "lifeStage": "Pre-retiree",
+    "career": "Education"
+  }
+]
