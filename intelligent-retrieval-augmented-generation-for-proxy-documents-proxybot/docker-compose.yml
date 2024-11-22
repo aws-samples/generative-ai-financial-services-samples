@@ -1,0 +1,22 @@
+version: '3.8'
+services:
+  proxybot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: proxybot-image
+    container_name: proxybot-container
+    ports:
+      - 8501:8501
+      - 8080:8080
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+      - ${AWS_CREDENTIALS_PATH:-${USERPROFILE:-${HOME}}/.aws/credentials}:/root/.aws/credentials:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_PROFILE=${AWS_PROFILE}
+    tty: true
+    restart: always

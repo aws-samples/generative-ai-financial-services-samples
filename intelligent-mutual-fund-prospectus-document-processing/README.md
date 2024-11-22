@@ -13,9 +13,21 @@ Welcome to our state-of-the-art Intelligent Mutual Fund Prospectus Document Proc
 - **Pre-summarization**: Ensure detailed and context-aware responses every time.
 - **Seamless Integration**: Integrated with tools like Langchain, Streamlit, and Bedrock for a seamless experience.
 
+
+
 # Project Diagram 📊 
 
-![Project Diagram](assets/diagram.png)
+## Textract OCR passing text to Claude:
+
+![Project Diagram](assets/textract_diagram.png)
+
+## Claude Vision alone:
+
+![Project Diagram](assets/claude_3_vision_diagram.png)
+
+## Textract OCR passing text to Claude Vision:
+
+![Project Diagram](assets/claude_3_vision_text_diagram.png)
 
 # Run Locally 💻
 
@@ -25,6 +37,32 @@ This repository beautifully marries the capabilities of:
 1. **Langchain**: Advanced linguistic chains and text parsing.
 2. **Streamlit**: An intuitive platform for crafting custom ML tools.
 3. **Bedrock**: Crafting complex ML structures with ease.
+
+## Pre-Requisites
+
+### S3 Bucket
+
+Please create a S3 Bucket with a unique name and set an env variable called "BUCKET_NAME" before running `run.sh`. If you'd like to use the AWS CLI, you can run the following command to create a S3 bucket:
+
+```
+BUCKET_NAME=<TYPE YOUR BUCKET NAME>
+aws s3 mb s3://$BUCKET_NAME
+```
+
+Then you can set env. var as:
+
+```
+export BUCKET_NAME=$BUCKET_NAME
+```
+
+## Configure AWS command line and set credentials and region
+
+```
+aws configure
+and/or
+aws configure set region us-west-2
+```
+(or any other region where enabled Bedrock to run the Anrhtopic Claude models you want to test)
 
 ## Install
 
@@ -37,6 +75,7 @@ conda activate financialqaenv
 pip install --upgrade pip
 pip install --upgrade -r requirements.txt
 ```
+
 
 ## Run
 
@@ -150,6 +189,7 @@ To make the most out of our project, familiarize yourself with these key compone
 - [Max Winter](https://www.linkedin.com/in/maxwinter/)
 - [Rubén Afonso](https://www.linkedin.com/in/rubenafonso/)
 - [Samuel Baruffi](https://www.linkedin.com/in/samuelbaruffi/)
+- [Liam Knowles](https://www.linkedin.com/in/liam-knowles)
 
 # Contributors
 

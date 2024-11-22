@@ -1,0 +1,34 @@
+{
+    "Loyal": {
+    "Characteristics": "Spend good money with us often. Responsive to promotions.",
+    "RecommendedActions": "Upsell higher value products. Ask for reviews. Engage them."
+    },
+    "Potential Loyalist": {
+    "Characteristics": "Recent customers, but spent a good amount and bought more than once.",
+    "RecommendedActions": "Offer membership / loyalty program, recommend other products."
+    },
+    "Recent Customers": {
+    "Characteristics": "Bought most recently, but not often.",
+    "RecommendedActions": "Provide on-boarding support, give them early success, start building relationship."
+    },
+    "Need Attention": {
+    "Characteristics": "Above average recency, frequency and monetary values. May not have bought very recently thou..",
+    "RecommendedActions": "Make limited time offers, Recommend based on past purchases. Reactivate them."
+    },
+    "About to Sleep": {
+    "Characteristics": "Below average recency, frequency and monetary values. Will lose them if not reactivated.",
+    "RecommendedActions": "Share valuable resources, recommend popular products / renewals at discount, reconnect with them."
+    },
+    "At Risk": {
+    "Characteristics": "Spent big money and purchased often. But long time ago. Need to bring them back!",
+    "RecommendedActions": "Send personalized emails to reconnect, offer renewals, provide helpful resources."
+    },
+    "Hibernating": {
+    "Characteristics": "Last purchase was long back, low spenders and low number of orders.",
+    "RecommendedActions": "Offer other relevant products and special discounts. Recreate brand value."
+    },
+    "Lost": {
+    "Characteristics": "Lowest recency, frequency and monetary scores.",
+    "RecommendedActions": "Revive interest with reach out campaign, ignore otherwise."
+    }
+}

@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "fs-04-intelligent-rag-chatbot"
+version = "0.1.0"
+description = "Intelligent RAG ProxyBot"
+authors = ["Dayo Oguntoyinbo <dayojohn@amazon.co.uk>"]
+readme = "README.md"
+
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.9.7 || >3.9.7,<4.0"
+amazon-textract-textractor = "1.7.1"
+boto3 = "1.28.83"
+botocore = "1.31.83"
+streamlit = "1.28.1"
+langchain = "^0.1.16"
+pandas = "1.4.4"
+numpy = "^1.26.4"
+opensearch-py = "2.3.2"
+python-dotenv = "0.21.0"
+langchain-community = "^0.0.34"
+bandit = "^1.7.8"
+chardet = "^5.2.0"
+PyPDF2 = "^3.0.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

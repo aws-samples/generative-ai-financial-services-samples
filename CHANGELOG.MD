@@ -5,28 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
  
-## [Unreleased] - yyyy-mm-dd
+## [Initial Release] - 2024-02-09
  
-Here we write upgrading notes for brands. It's a team effort to make them as
-straightforward as possible.
+The `intelligent-mutual-fund-prospectus-document-processing` was releases as first module.
  
 ### Added
-- [PROJECTNAME-XXXX](http://tickets.projectname.com/browse/PROJECTNAME-XXXX)
-  MINOR Ticket title goes here.
-- [PROJECTNAME-YYYY](http://tickets.projectname.com/browse/PROJECTNAME-YYYY)
-  PATCH Ticket title goes here.
+[Intelligent Mutual Fund Prospectus Document Processing](./intelligent-mutual-fund-prospectus-document-processing)
+
  
-### Changed
- 
-### Fixed
- 
-## [1.0.0] - 2023-11-21
+## [Second Release] - 2024-07-17
   
-Here we would have the update steps for 1.0.0 for people to follow.
+The `intelligent-retrieval-augmented-generation-for-proxy-documents-proxybot` was releases as second module.
  
 ### Added
+[Intelligent Retrieval-Augmented Generation (RAG) for Proxy Documents - ProxyBot](./intelligent-retrieval-augmented-generation-for-proxy-documents-proxybot)
  
-### Changed
- 
-### Fixed
  

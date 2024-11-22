@@ -4,7 +4,10 @@ pandas
 pyyaml
 streamlit
 langchain
+langchain-community
 nltk
 opensearch-py
 pdfplumber
 python-dotenv
+pypdfium2
+amazon-textract-textractor
