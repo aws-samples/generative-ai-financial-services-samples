@@ -1,16 +1,15 @@
 import os
 from botocore.exceptions import ClientError
 import streamlit as st
-import yaml
 import re
+import json
 import base64
 from langchain_handler.langchain_qa import (
     search_and_answer_pdf,
     validate_environment,
     amazon_bedrock_models,
+    run_tool_use
 )
-from data_handlers.doc_source import DocSource, InMemoryAny
-from data_handlers.labels import load_labels_master, load_labels
 from utils.utils_text import (
     spans_of_tokens_ordered,
     spans_of_tokens_compact,
@@ -18,8 +17,7 @@ from utils.utils_text import (
     text_tokenizer,
 )
 from utils.utils_os import (
-    read_json, 
-    read_jsonl
+    read_yaml
 )
 import boto3
 import io
@@ -276,11 +274,8 @@ def main():
     with col1:
         # Select OCR Tool
         st.session_state.ocr_tool = st.selectbox("Select OCR Tool", ["Textract", "Claude 3 Vision (Experimental)", "Claude 3 Vision & Textract (Experimental)"])
-        compatible_models = []
-        if st.session_state.ocr_tool == "Textract":
-            compatible_models = [model for model in list_llm_models()]
-        else:
-            compatible_models = ["anthropic.claude-3-sonnet-20240229-v1:0", "anthropic.claude-3-5-sonnet-20240620-v1:0", "anthropic.claude-3-haiku-20240307-v1:0"]
+        compatible_models = [model for model in list_llm_models()]
+        
     with col2: 
         model_id = st.selectbox("Select LLM", compatible_models)
 
@@ -295,11 +290,14 @@ def main():
         elif demo_version == "Mutual Fund Examples":
             document_repo_file_path = './docs/mutual_fund/'
         
-        questions = read_json(document_repo_file_path + 'questions.json')
-        questions = ["Ask your question"] + list(questions.values())
+        data = read_yaml(document_repo_file_path + 'data.yaml')
+        
+        # Get questions
+        questions = ["Ask your question"] + [row['prompt'] for row in data]
         questions = [f"{i}. {q}" for i, q in enumerate(questions)]
         
-    col1, col2 = st.columns([2.2, 2.0])
+        
+    col1, col2 = st.columns([1.5, 2.0])
     # Define doc_source_nm early on to ensure it's available when needed
     with col1:  # Right side - Only the full PDF display
         pdf_docs = get_file_list(document_repo_file_path)
@@ -318,14 +316,14 @@ def main():
         # Select a language model from the available options
         with st.expander('Architecture Diagram', expanded=True): 
             if st.session_state.ocr_tool == 'Claude 3 Vision (Experimental)':
-                st.image("./assets/claude_3_vision_diagram.png", use_column_width=True)
+                st.image("./assets/claude_3_vision_diagram.png", use_container_width=True)
             elif st.session_state.ocr_tool == 'Claude 3 Vision & Textract (Experimental)':
-                st.image("./assets/claude_3_vision_text_diagram.png", use_column_width=True)
+                st.image("./assets/claude_3_vision_text_diagram.png", use_container_width=True)
             else: 
-                st.image("./assets/textract_diagram.png", use_column_width=True)
+                st.image("./assets/textract_diagram.png", use_container_width=True)
 
         # Add a multiselect dropdown for Comprehend, Polly, and Textract
-        selected_services = st.multiselect("Select Additional AI Services", ["Comprehend", "Polly", "Textract"])
+        selected_services = st.multiselect("Select Additional AI Services", ["Tool Use (Bedrock)", "Textract", "Comprehend", "Polly"])
 
         
         # Handling user input for the question
@@ -360,18 +358,67 @@ def main():
 
         # code for processing the query and handling responses from Bedrock
         with st.expander("Amazon Bedrock", expanded=True):
-            with st.spinner("Processing Query with Amazon Bedrock"):
-                response, ground_truth, all_text = search_and_answer_pdf(
-                    file_path=doc_path,
-                    query=final_query,
-                    ocr_tool=st.session_state.ocr_tool, 
-                    model_id=st.session_state.modelID,
-                    )
+            try:
+                # Three attempts
+                for _ in range(0, 3):
+                    response, ground_truth, all_text, token_usage = search_and_answer_pdf(
+                        file_path=doc_path,
+                        query=final_query,
+                        ocr_tool=st.session_state.ocr_tool, 
+                        model_id=st.session_state.modelID,
+                        )
+                    break
+            except Exception as e:
+                ground_truth = ""
+                all_text = ""
+                token_usage = ""
+                response = ""
+                print(e)
 
             print("BEDROCK RESPONSE:" + response)
 
             st.write(f"**Bedrock Response**: {response}")
             st.write("\n")
+        
+        # Display Pricing only when Bedrock returns a response
+        if response:
+            with st.expander("Amazon Bedrock Pricing", expanded=True):
+
+                print("PRICING RESPONSE:", token_usage)
+                
+                input_token_cost = token_usage['inputTokens'] * amazon_bedrock_models()[st.session_state.modelID]['inputTokenCost'] / 1000
+                output_token_cost = token_usage['outputTokens'] * amazon_bedrock_models()[st.session_state.modelID]['outputTokenCost'] / 1000
+                cost = round(input_token_cost + output_token_cost, 5)
+
+                st.write(f"**Cost**: ${cost}")
+                st.write("\n")
+
+        # Run Tool Use with Bedrock Response to keep consistency between the text response and the json format
+        if "Tool Use (Bedrock)" in selected_services:
+            with st.expander("Tool Use (Bedrock)", expanded=True):
+                with st.spinner("Processing Query with Tool Use (Bedrock)"):
+                    try:
+                        tool_config = json.loads([row["toolConfig"] for row in data if row['prompt'] == question][0])
+                        # Three attempts
+                        for _ in range(0, 3):
+                            tool_response = run_tool_use(
+                                tool_config=tool_config,
+                                all_text=response,
+                                query=final_query,
+                                model_id=st.session_state.modelID,
+                            )
+                            break
+                    except IndexError as e:
+                        tool_response = {"MESSAGE": "TOOL USE CANNOT BE USED FOR THIS QUESTION. PLEASE CREATE A NEW TOOL CONFIG FILE AND TRY AGAIN."}
+                    except Exception as e:
+                        tool_response = {}
+                        print(e)
+
+                print("TOOL USE RESPONSE:", tool_response)
+
+                st.write(f"**Tool Use Response**:\n")
+                st.json(tool_response)
+                st.write("\n")
 
         if "Comprehend" in selected_services:
             print("Adding Comrehend analysis to response.")

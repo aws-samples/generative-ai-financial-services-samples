@@ -1,13 +1,14 @@
 import re
 import platform
 import boto3
-import base64
 from io import BytesIO 
-import json
-from textractor import Textractor
-from textractor.data.constants import TextractFeatures
+from utils.utils_os import read_json
+import textractcaller as tc
+from textractprettyprinter.t_pretty_print import get_text_from_layout_json
 import os
 import pypdfium2 as pdfium
+import nltk
+nltk.download('stopwords')
 
 # Ensure that the Python version is compatible with the requirements
 def validate_environment():
@@ -17,34 +18,41 @@ def validate_environment():
 # Function to get configurations for different Bedrock models
 def amazon_bedrock_models():
     return {
-        "anthropic.claude-3-sonnet-20240229-v1:0": {
+        "us.anthropic.claude-3-haiku-20240307-v1:0": {
             "temperature": 0.0,
-            "top_p": .999,
-            "max_tokens": 4096,
-            "stop_sequences": [],
+            "topP": .999,
+            "maxTokens": 4096,
+            "inputTokenCost": 0.00025,
+            "outputTokenCost": 0.00125
+        },
+        "us.anthropic.claude-3-5-haiku-20241022-v1:0": {
+            "temperature": 0.0,
+            "topP": .999,
+            "maxTokens": 4096,
+            "inputTokenCost": 0.001,
+            "outputTokenCost": 0.005
+        },
+        "us.anthropic.claude-3-sonnet-20240229-v1:0": {
+            "temperature": 0.0,
+            "topP": .999,
+            "maxTokens": 4096,
+            "inputTokenCost": 0.003,
+            "outputTokenCost": 0.015
         },      
-        "anthropic.claude-3-5-sonnet-20240620-v1:0": {
+        "us.anthropic.claude-3-5-sonnet-20240620-v1:0": {
             "temperature": 0.0,
-            "top_p": .999,
-            "max_tokens": 4096,
-            "stop_sequences": [],
-        },      
-        "anthropic.claude-3-haiku-20240307-v1:0": {
-            "temperature": 0.0,
-            "top_p": .999,
-            "max_tokens": 4096,
-            "stop_sequences": [],
+            "topP": .999,
+            "maxTokens": 4096,
+            "inputTokenCost": 0.003,
+            "outputTokenCost": 0.015
         },
-        "anthropic.claude-v2": {
+        "us.anthropic.claude-3-5-sonnet-20241022-v2:0": {
             "temperature": 0.0,
-            "max_tokens": 4096,
-            "stop_sequences": ["\n\nHuman"],
-        },
-        "anthropic.claude-instant-v1": {
-            "temperature": 0.0,
-            "max_tokens": 4096,
-            "stop_sequences": ["\n\nHuman"],
-        },
+            "topP": .999,
+            "maxTokens": 4096,
+            "inputTokenCost": 0.003,
+            "outputTokenCost": 0.015
+        }
     }
 
 def get_tag_text(text, tag_name):
@@ -68,35 +76,43 @@ def encode_pdf_to_base64(file_path):
         pil_image = images[i].to_pil()
         pil_image.save(buffered, format='PNG')
         img_byte = buffered.getvalue()
-        img_base64 = base64.b64encode(img_byte)
-        img_base64_str = img_base64.decode('utf-8')
         encoded_messages.append({
-            "type": "text",
             "text": "Image " + str(i+1) + " :"
         })
         encoded_messages.append({
-            "type": "image",
-            "source": {
-                "type": "base64",
-                "media_type": "image/png",
-                "data": img_base64_str
+            "image": {
+                "format": "png",
+                "source": {
+                            "bytes": img_byte
+                        }
             }
         })
     return encoded_messages
 
-def call_claude_3_model(messages, system_prompt, model_id):
+def call_claude_3_model(prompt, system_prompt, model_id, tool_config=None):
     bedrock_rt = boto3.client("bedrock-runtime")
-    body = {"messages": [{"role": "user", "content": messages}], 
-            "system":system_prompt, 
-            "max_tokens": 1000, 
-            "temperature": 0, 
-            "anthropic_version": "", 
-            "top_k": 250, 
-            "top_p": 1, 
-            "stop_sequences": ["User"]}
-    response = bedrock_rt.invoke_model(modelId=model_id, body=json.dumps(body))
-    text_resp = json.loads(response['body'].read().decode('utf-8'))
-    return text_resp['content'][0]['text']
+    inference_config = {"maxTokens": 4096, "temperature": 0, "topP": 1}
+    params = {
+        "modelId": model_id,
+        "messages": [{"role": "user", "content": prompt}], 
+        "inferenceConfig": inference_config
+        }
+    if system_prompt:
+        params["system"] = [{"text": system_prompt}]
+    
+    if tool_config:
+        params["toolConfig"] = tool_config
+    response = bedrock_rt.converse(**params)
+    # Token Usage
+    token_usage = response['usage']
+    content = response['output']['message']['content'][0]
+    # Detect Tool Use
+    if response["stopReason"] == "tool_use":
+        response_text = content['toolUse']['input']
+    else:
+        response_text = content["text"]
+
+    return response_text, token_usage
 
 def extract_answer_and_ground_truth(text_response):
     ANSWER_TAG = "ANSWER"
@@ -117,7 +133,7 @@ def prepare_claude_3_vision_prompt(query, encoded_images):
 
     encoded_messages.extend(encoded_images)
 
-    encoded_messages.append({"type": "text", "text": f"""
+    encoded_messages.append({"text": f"""
                 Below is the question: 
                 <{QUESTION_TAG}>
                 {query}
@@ -143,7 +159,9 @@ def prepare_textract_prompt(query, text_data):
     QUESTION_TAG = "QUESTION"
     DATA_TAG = "DATA"
 
-    prompt = f"""Below is the user question:
+    prompt = [
+        {
+            "text": f"""Below is the user question:
                 <{QUESTION_TAG}>
                 {query}
                 </{QUESTION_TAG}>
@@ -155,6 +173,8 @@ def prepare_textract_prompt(query, text_data):
 
                 Given the question provided within the <{QUESTION_TAG}> XML tag, please answer the question using the <{DATA_TAG}> XML tag.
                 """
+        }
+    ]
 
     system_prompt = f"""You are a document analysis specialist and expert forensic document examiner.
                 Please answer the user question in the <{QUESTION_TAG}> XML tag.
@@ -177,7 +197,7 @@ def prepare_claude_3_vision_and_textract_prompt(query, encoded_images, all_text)
 
     encoded_messages.extend(encoded_images)
 
-    encoded_messages.append({"type": "text", "text": f"""
+    encoded_messages.append({"text": f"""
                 Below is the extracted text data: 
                 <{TEXT_DATA_TAG}>
                 {all_text}
@@ -203,6 +223,11 @@ def prepare_claude_3_vision_and_textract_prompt(query, encoded_images, all_text)
     print(encoded_messages)
     return encoded_messages, system_prompt
 
+def run_tool_use(tool_config, all_text, query, model_id):
+    prompt, system_prompt = prepare_textract_prompt(query, all_text)
+    response_text, _ = call_claude_3_model(prompt, system_prompt, model_id, tool_config)
+    return response_text
+
 def search_and_answer_pdf(file_path, query, ocr_tool, model_id):
     all_text = create_or_retrieve_textract_file(file_path)
     assert ocr_tool in ["Claude 3 Vision (Experimental)", "Claude 3 Vision & Textract (Experimental)", "Textract"]
@@ -219,10 +244,10 @@ def search_and_answer_pdf(file_path, query, ocr_tool, model_id):
         prompt, system_prompt = prepare_textract_prompt(query, all_text)
     else: 
         print("Not a valid OCR tool selection")
-    response_text = call_claude_3_model(prompt, system_prompt, model_id)
+    
+    response_text, token_usage = call_claude_3_model(prompt, system_prompt, model_id)
     answer, ground_truth = extract_answer_and_ground_truth(response_text)
-
-    return answer, ground_truth, all_text
+    return answer, ground_truth, all_text, token_usage
 
 def check_s3_for_text_file(bucket_name, s3_key):
     s3 = boto3.client('s3')
@@ -242,18 +267,35 @@ def download_text_file_from_s3(bucket_name, s3_key):
         return None
 
 def process_pdf_with_textract(file_path, bucket_name):
-    extractor = Textractor(profile_name="default")
-    document = extractor.start_document_analysis(
-        file_source=file_path,
-        features=[TextractFeatures.LAYOUT, TextractFeatures.TABLES],
-        s3_upload_path=f"s3://{bucket_name}/genai-demo/textract_pdfs",
-        save_image=False
+    features = [
+        tc.Textract_Features.LAYOUT,
+        tc.Textract_Features.TABLES
+    ]
+    textract_json = tc.call_textract(
+        input_document=f"s3://{bucket_name}/{os.path.basename(file_path)}",
+        features=features
     )
-
-    all_text = document.get_text()
-    all_text = ' '.join(all_text.split())  # Remove extra whitespace
+    
+    layout = get_text_from_layout_json(
+        textract_json=textract_json,
+        exclude_figure_text=True, # optional
+        exclude_page_header=False, # optional
+        exclude_page_footer=True, # optional
+        exclude_page_number=True, # optional
+        generate_markdown=True  # optional
+        # save_txt_path="s3://<your-bucket-name") # optional
+    )
+    all_text = "".join([f"\n\n ======================= PAGE NUMBER: {idx} =======================\n\n{page.strip()}" for idx, page in layout.items()])
 
     return all_text
+
+def upload_pdf_to_s3(file_path, bucket_name, s3_key):
+    s3 = boto3.client('s3')
+    s3.upload_file(
+        Filename=file_path,
+        Bucket=bucket_name,
+        Key=s3_key,
+    )
 
 def upload_text_to_s3(text_content, bucket_name, s3_key):
     s3 = boto3.client('s3')
@@ -272,6 +314,7 @@ def create_or_retrieve_textract_file(file_path):
         all_text = download_text_file_from_s3(bucket_name, s3_key)
     else:
         print(f"Text file {s3_key} does not exist in bucket {bucket_name}. Processing and uploading.")
+        upload_pdf_to_s3(file_path, bucket_name, os.path.basename(file_path))
         all_text = process_pdf_with_textract(file_path, bucket_name)
         upload_text_to_s3(all_text, bucket_name, s3_key)
 

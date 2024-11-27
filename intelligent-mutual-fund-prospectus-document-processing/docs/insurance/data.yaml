@@ -1,0 +1,189 @@
+- type: Applicant's Name
+  prompt: What is the applicant's name?
+  toolConfig: |
+    {
+      "toolChoice": {
+          "tool": {"name":"insurancy_policy_json"}
+      },
+      "tools": [
+          {
+              "toolSpec": {
+                  "name": "insurancy_policy_json",
+                  "description": "Schema for extracting key information from insurance policies",
+                  "inputSchema": {
+                      "json": {
+                          "type": "object",
+                          "properties": {
+                              "applicant_name": {
+                                  "type": "string",
+                                  "description": "Applicant's name of the insurace policy."
+                              }
+                          },
+                          "required": ["applicant_name"]
+                      }
+                  }
+              }
+          }
+      ]
+    }
+- type: Applicant's Address
+  prompt: What is the address or location?
+  toolConfig: |
+    {
+      "toolChoice": {
+          "tool": {"name":"insurancy_policy_json"}
+      },
+      "tools": [
+          {
+              "toolSpec": {
+                  "name": "insurancy_policy_json",
+                  "description": "Schema for extracting key information from insurance policies",
+                  "inputSchema": {
+                      "json": {
+                          "type": "object",
+                          "properties": {
+                              "address": {
+                                  "type": "string",
+                                  "description": "Address of the insurace policy."
+                              }
+                          },
+                          "required": ["address"]
+                      }
+                  }
+              }
+          }
+      ]
+    }
+- type: Insured
+  prompt: Who is the insured?
+  toolConfig: |
+    {
+      "toolChoice": {
+          "tool": {"name":"insurancy_policy_json"}
+      },
+      "tools": [
+          {
+              "toolSpec": {
+                  "name": "insurancy_policy_json",
+                  "description": "Schema for extracting key information from insurance policies",
+                  "inputSchema": {
+                      "json": {
+                          "type": "object",
+                          "properties": {
+                              "insured": {
+                                  "type": "string",
+                                  "description": "The name of the insured entity or individual"
+                              }
+                          },
+                          "required": ["insured"]
+                      }
+                  }
+              }
+          }
+      ]
+    }
+- type: Effective Date
+  prompt: What is the effective date?
+  toolConfig: |
+    {
+      "toolChoice": {
+          "tool": {"name":"insurancy_policy_json"}
+      },
+      "tools": [
+          {
+              "toolSpec": {
+                  "name": "insurancy_policy_json",
+                  "description": "Schema for extracting key information from insurance policies",
+                  "inputSchema": {
+                      "json": {
+                          "type": "object",
+                          "properties": {
+                              "effective_date": {
+                                  "type": "string",
+                                  "description": "The date when the insurance policy becomes active (YYYY-MM-DD)"
+                              }
+                          },
+                          "required": ["effective_date"]
+                      }
+                  }
+              }
+          }
+      ]
+    }
+- type: Coverage Amount
+  prompt: What is the coverage amount?
+  toolConfig: |
+    {
+      "toolChoice": {
+          "tool": {"name":"insurancy_policy_json"}
+      },
+      "tools": [
+          {
+              "toolSpec": {
+                  "name": "insurancy_policy_json",
+                  "description": "Schema for extracting key information from insurance policies",
+                  "inputSchema": {
+                      "json": {
+                          "type": "object",
+                          "properties": {
+                              "coverage_amount": {
+                                  "type": "string",
+                                  "description": "The amount covered by the policy"
+                              }
+                          },
+                          "required": ["effective_date"]
+                      }
+                  }
+              }
+          }
+      ]
+    }
+- type: Insurance Policy
+  prompt: List all insurance policy numbers, types and effective dates.
+  toolConfig: |
+    {
+        "toolChoice": {
+            "tool": {"name":"insurancy_policy_json"}
+        },
+        "tools": [
+            {
+                "toolSpec": {
+                    "name": "insurancy_policy_json",
+                    "description": "Schema for extracting key information from insurance policies",
+                    "inputSchema": {
+                        "json": {
+                            "type": "object",
+                            "properties": {
+                                "policies": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "policy_number": {
+                                                "type": "string",
+                                                "description": "The unique identifier for the insurance policy"
+                                            },
+                                            "policy_type": {
+                                                "type": "string",
+                                                "description": "The coverage type for the insurance policy"
+                                            },
+                                            "effective_date": {
+                                                "type": "string",
+                                                "description": "The date when the insurance policy becomes active (YYYY-MM-DD)"
+                                            },
+                                            "expiration_date": {
+                                                "type": "number",
+                                                "description": "The date when the insurance policy expires (YYYY-MM-DD)"
+                                            }
+                                        },
+                                        "required": ["policy_number", "policy_type", "effective_date", "expiration_date"]
+                                    }
+                                }
+                            },
+                            "required": ["policies"]
+                        }
+                    }
+                }
+            }
+        ]
+    }

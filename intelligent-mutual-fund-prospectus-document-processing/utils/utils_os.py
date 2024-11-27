@@ -1,9 +1,22 @@
 import os
 import boto3
 import json
+import yaml
 import glob, shutil
 from typing import List
 
+# Function to read a YAML file and return its contents
+def read_yaml(path):
+    try:
+        with open(path, 'r') as f:
+            data = yaml.safe_load(f)
+        return data
+    except FileNotFoundError as e:
+        print(f"File {path} not found.")
+        return e
+    except yaml.YAMLError as e:
+        print(f"Error parsing YAML file: {e}")
+        return e
 
 # Function to read a JSONL file and return its contents
 def read_jsonl(path):
