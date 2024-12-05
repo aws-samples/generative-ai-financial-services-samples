@@ -44,7 +44,7 @@
                           "properties": {
                               "address": {
                                   "type": "string",
-                                  "description": "Address of the insurace policy."
+                                  "description": "Address of the insurace policy: : [Street Number] [Street Name] [Street Type], [Suite/Unit Type] [Suite/Unit Number][City], [State Abbreviation] [ZIP Code]"
                               }
                           },
                           "required": ["address"]

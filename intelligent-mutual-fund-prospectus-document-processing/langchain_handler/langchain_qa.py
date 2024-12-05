@@ -18,6 +18,27 @@ def validate_environment():
 # Function to get configurations for different Bedrock models
 def amazon_bedrock_models():
     return {
+        "us.amazon.nova-micro-v1:0": {
+            "temperature": 0.0,
+            "topP": .999,
+            "maxTokens": 4096,
+            "inputTokenCost": 0.000035,
+            "outputTokenCost": 0.00014
+        },
+        "us.amazon.nova-lite-v1:0": {
+            "temperature": 0.0,
+            "topP": .999,
+            "maxTokens": 4096,
+            "inputTokenCost": 0.00006,
+            "outputTokenCost":0.00024
+        },
+        "us.amazon.nova-pro-v1:0": {
+            "temperature": 0.0,
+            "topP": .999,
+            "maxTokens": 4096,
+            "inputTokenCost": 0.0008,
+            "outputTokenCost": 0.0032
+        },
         "us.anthropic.claude-3-haiku-20240307-v1:0": {
             "temperature": 0.0,
             "topP": .999,

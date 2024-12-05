@@ -23,6 +23,44 @@ import boto3
 import io
 from contextlib import closing
 
+
+import time
+import threading
+from functools import wraps
+
+def timeout_decorator(seconds=10):
+    def actual_decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            result = []
+            error = []
+            
+            def target():
+                try:
+                    result.append(func(*args, **kwargs))
+                except Exception as e:
+                    error.append(e)
+            
+            thread = threading.Thread(target=target)
+            start_time = time.time()
+            thread.start()
+            thread.join(timeout=seconds)
+            
+            execution_time = time.time() - start_time
+            print(f"Function '{func.__name__}' took {execution_time:.2f} seconds")
+            
+            if thread.is_alive():
+                thread.join(timeout=0)  # Clean up the thread
+                raise TimeoutError(f"Function execution timed out after {seconds} seconds")
+            
+            if error:
+                raise error[0]
+                
+            return result[0] if result else None
+            
+        return wrapper
+    return actual_decorator
+
 # check if an env variable called BUCKET_NAME is existing
 # if yes, continue, else error out and say "S3 Bucket must be set for Textract processing. Please see README for more information"
 if "BUCKET_NAME" not in os.environ:
@@ -141,6 +179,10 @@ st.markdown(content_css, unsafe_allow_html=True)
 def check_env():
     # Validate the environment for the langchain QA model
     validate_environment()
+    
+def list_model_providers():
+    providers = {"Anthropic": "anthropic", "Amazon Nova": "amazon"}
+    return providers
 
 @st.cache_data
 def list_llm_models():
@@ -191,7 +233,7 @@ def markdown_naive(text, tokens, bg_color=None):
     text = text.replace("$", "\\$")
     return text
 
-
+@timeout_decorator(seconds=10)
 def markdown2(text, tokens, fg_color=None, bg_color=None):
     """
     The exact match of answer may not be the possible.
@@ -250,7 +292,6 @@ def displayPDF(file):
         st.error(f"Failed to display PDF: {e}")
         print(f"Failed to display PDF: {e}")  # For debugging in server logs
 
-
 # The main function where the Streamlit app logic resides
 def main():
     # Ensure the environment is set up correctly
@@ -269,20 +310,28 @@ def main():
         st.session_state.file_list = []
 
     
-    
-    col1, col2, col3 = st.columns([2.0, 2.2, 2.0])
+    col1, col2, col3, col4 = st.columns([1.5, 1.8, 1.8, 1.5])
     with col1:
         # Select OCR Tool
         st.session_state.ocr_tool = st.selectbox("Select OCR Tool", ["Textract", "Claude 3 Vision (Experimental)", "Claude 3 Vision & Textract (Experimental)"])
-        compatible_models = [model for model in list_llm_models()]
-        
+    
+    model_providers = list_model_providers()
+    
     with col2: 
+        model_provider = st.selectbox("Select Model Provider", list(model_providers.keys()))
+
+        # Update session state variables
+        st.session_state.modelID = model_provider
+        
+    compatible_models = [model for model in list_llm_models() if model_providers[model_provider] in model]
+
+    with col3: 
         model_id = st.selectbox("Select LLM", compatible_models)
 
         # Update session state variables
         st.session_state.modelID = model_id
 
-    with col3: 
+    with col4: 
         demo_version = st.selectbox("Select Examples Version", ["Insurance Examples", "Mutual Fund Examples"])
 
         if demo_version == "Insurance Examples":
@@ -399,6 +448,10 @@ def main():
                 with st.spinner("Processing Query with Tool Use (Bedrock)"):
                     try:
                         tool_config = json.loads([row["toolConfig"] for row in data if row['prompt'] == question][0])
+                        
+                        if model_provider == "Amazon Nova":
+                            tool_config.pop('toolChoice', None)
+                        
                         # Three attempts
                         for _ in range(0, 3):
                             tool_response = run_tool_use(
@@ -413,6 +466,10 @@ def main():
                     except Exception as e:
                         tool_response = {}
                         print(e)
+                
+                if not isinstance(tool_response, dict):
+                    print("TOOL USE RESPONSE IS NOT A VALID JSON FORMAT")
+                    tool_response = {}
 
                 print("TOOL USE RESPONSE:", tool_response)
 
@@ -478,8 +535,13 @@ def main():
 
                         markd = markdown_escape(all_text)
 
-                        markd = markdown2(text=markd, tokens=tokens_answer, bg_color="#90EE90")
-                        markd = markdown2(text=markd, tokens=tokens_miss, bg_color="red")
+                        # Adding timeout handling after 10 seconds. This avoid long running jobs that can trigger an exist signal for the whole streamlit app.
+                        try:
+                            markd = markdown2(text=markd, tokens=tokens_answer, bg_color="#90EE90")
+                            markd = markdown2(text=markd, tokens=tokens_miss, bg_color="red")
+                        except TimeoutError as e:
+                            markd = all_text
+                            print(e)
 
                         st.markdown(markd, unsafe_allow_html=True)
                     else:
