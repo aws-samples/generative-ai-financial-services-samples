@@ -183,7 +183,7 @@ def check_env():
     validate_environment()
     
 def list_model_providers():
-    providers = {"Anthropic": {"provider": "anthropic", "model": "Claude 3"}, "Amazon Nova": {"provider": "amazon", "model": "Nova"}}
+    providers = {"Anthropic": {"provider": "anthropic", "model": "Claude 3"}, "Amazon Nova": {"provider": "amazon", "model": "Nova"}, "Meta": {"provider": "meta", "model": "Llama 3.2"}}
     return providers
 
 @st.cache_data
@@ -335,9 +335,13 @@ def main():
     with col2:
         # Select OCR Tool
         ocr_tools = ["Textract",f"{model_providers[st.session_state.modelProvider]['model']} Vision (Experimental)", f"{model_providers[st.session_state.modelProvider]['model']} Vision & Textract (Experimental)", "Converse API - DocumentBlock (Experimental)"]
+        if (st.session_state.modelProvider == "Meta"):
+            ocr_tools = [ocr_tools[0], ocr_tools[-1]]
         st.session_state.ocr_tool = st.selectbox("Select OCR Tool", ocr_tools)
         if (st.session_state.ocr_tool != "Textract") and (st.session_state.modelProvider == "Amazon Nova"):
             compatible_models.remove('us.amazon.nova-micro-v1:0')
+        if (st.session_state.ocr_tool not in ["Textract", "Converse API - DocumentBlock (Experimental)"]) and (st.session_state.modelProvider == "Anthropic"):
+            compatible_models.remove('us.anthropic.claude-3-5-haiku-20241022-v1:0')
     
     with col3: 
         model_id = st.selectbox("Select LLM", compatible_models)
@@ -437,7 +441,11 @@ def main():
                 token_usage = ""
                 response = ""
                 print(e)
-
+            
+            if response is None:
+                response = ""
+                print("BEDROCK RESPONSE WAS 'NONE'")
+                
             print("BEDROCK RESPONSE:" + response)
 
             st.write(f"**Bedrock Response**: {response}")
@@ -463,7 +471,7 @@ def main():
                     try:
                         tool_config = json.loads([row["toolConfig"] for row in data if row['prompt'] == question][0])
                         
-                        if st.session_state.modelProvider == "Amazon Nova":
+                        if st.session_state.modelProvider in ["Amazon Nova", "Meta"]:
                             tool_config.pop('toolChoice', None)
                         
                         # Three attempts

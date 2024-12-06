@@ -19,6 +19,20 @@ def validate_environment():
 # Function to get configurations for different Bedrock models
 def amazon_bedrock_models():
     return {
+        "us.meta.llama3-2-11b-instruct-v1:0": {
+            "temperature": 0.0,
+            "topP": .999,
+            "maxTokens": 4096,
+            "inputTokenCost": 0.00016,
+            "outputTokenCost": 0.00016
+        },
+        "us.meta.llama3-2-90b-instruct-v1:0": {
+            "temperature": 0.0,
+            "topP": .999,
+            "maxTokens": 4096,
+            "inputTokenCost": 0.00072,
+            "outputTokenCost": 0.00072
+        },
         "us.amazon.nova-micro-v1:0": {
             "temperature": 0.0,
             "topP": .999,
