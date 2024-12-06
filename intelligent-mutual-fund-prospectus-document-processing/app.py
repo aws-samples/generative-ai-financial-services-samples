@@ -181,7 +181,7 @@ def check_env():
     validate_environment()
     
 def list_model_providers():
-    providers = {"Anthropic": "anthropic", "Amazon Nova": "amazon"}
+    providers = {"Anthropic": {"provider": "anthropic", "model": "Claude 3"}, "Amazon Nova": {"provider": "amazon", "model": "Nova"}}
     return providers
 
 @st.cache_data
@@ -302,6 +302,8 @@ def main():
     # Select a language model from the available options
 
     # Initialize session state variables
+    if "modelProvider" not in st.session_state:
+        st.session_state.modelProvider = None
     if "modelID" not in st.session_state:
         st.session_state.modelID = None
     if "claude3direct" not in st.session_state:
@@ -310,21 +312,23 @@ def main():
         st.session_state.file_list = []
 
     
-    col1, col2, col3, col4 = st.columns([1.5, 1.8, 1.8, 1.5])
-    with col1:
-        # Select OCR Tool
-        st.session_state.ocr_tool = st.selectbox("Select OCR Tool", ["Textract", "Claude 3 Vision (Experimental)", "Claude 3 Vision & Textract (Experimental)"])
-    
-    model_providers = list_model_providers()
-    
-    with col2: 
+    col1, col2, col3, col4 = st.columns([1.8, 1.5, 1.8, 1.5])
+    with col1: 
+        model_providers = list_model_providers()
         model_provider = st.selectbox("Select Model Provider", list(model_providers.keys()))
 
         # Update session state variables
-        st.session_state.modelID = model_provider
+        st.session_state.modelProvider = model_provider
         
-    compatible_models = [model for model in list_llm_models() if model_providers[model_provider] in model]
-
+    compatible_models = [model for model in list_llm_models() if model_providers[st.session_state.modelProvider]['provider'] in model]
+    
+    with col2:
+        # Select OCR Tool
+        ocr_tools = ["Textract", f"{model_providers[st.session_state.modelProvider]['model']} Vision (Experimental)", f"{model_providers[st.session_state.modelProvider]['model']} Vision & Textract (Experimental)"]
+        st.session_state.ocr_tool = st.selectbox("Select OCR Tool", ocr_tools)
+        if (st.session_state.ocr_tool != "Textract") and (st.session_state.modelProvider == "Amazon Nova"):
+            compatible_models.remove('us.amazon.nova-micro-v1:0')
+    
     with col3: 
         model_id = st.selectbox("Select LLM", compatible_models)
 
@@ -364,9 +368,9 @@ def main():
     with col2:  # Left side - All settings and displays except the full PDF
         # Select a language model from the available options
         with st.expander('Architecture Diagram', expanded=True): 
-            if st.session_state.ocr_tool == 'Claude 3 Vision (Experimental)':
+            if 'Vision (Experimental)' in st.session_state.ocr_tool:
                 st.image("./assets/claude_3_vision_diagram.png", use_container_width=True)
-            elif st.session_state.ocr_tool == 'Claude 3 Vision & Textract (Experimental)':
+            elif 'Vision & Textract (Experimental)' in st.session_state.ocr_tool:
                 st.image("./assets/claude_3_vision_text_diagram.png", use_container_width=True)
             else: 
                 st.image("./assets/textract_diagram.png", use_container_width=True)
@@ -449,7 +453,7 @@ def main():
                     try:
                         tool_config = json.loads([row["toolConfig"] for row in data if row['prompt'] == question][0])
                         
-                        if model_provider == "Amazon Nova":
+                        if st.session_state.modelProvider == "Amazon Nova":
                             tool_config.pop('toolChoice', None)
                         
                         # Three attempts
@@ -510,7 +514,7 @@ def main():
         if "Polly" in selected_services:
             print("Adding Polly analysis to response.")
             with st.expander("Amazon Polly - Text to Speech", expanded=True):
-                with st.spinner("Processing Amazon Polly voice response from Claude 3"):
+                with st.spinner(f"Processing Amazon Polly voice response from {model_providers[st.session_state.modelProvider]['model']}"):
                     voice_id = 'Matthew'  # You can choose a different voice ID if desired
                     audio_data = synthesize_speech(response, voice_id)
                     st.audio(audio_data, format='audio/mp3')

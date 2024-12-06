@@ -2,7 +2,6 @@ import re
 import platform
 import boto3
 from io import BytesIO 
-from utils.utils_os import read_json
 import textractcaller as tc
 from textractprettyprinter.t_pretty_print import get_text_from_layout_json
 import os
@@ -13,7 +12,6 @@ nltk.download('stopwords')
 # Ensure that the Python version is compatible with the requirements
 def validate_environment():
     assert platform.python_version() >= "3.10.6"
-
 
 # Function to get configurations for different Bedrock models
 def amazon_bedrock_models():
@@ -110,7 +108,7 @@ def encode_pdf_to_base64(file_path):
         })
     return encoded_messages
 
-def call_claude_3_model(prompt, system_prompt, model_id, tool_config=None):
+def call_bedrock_model(prompt, system_prompt, model_id, tool_config=None):
     bedrock_rt = boto3.client("bedrock-runtime")
     inference_config = {"maxTokens": 4096, "temperature": 0, "topP": 1}
     params = {
@@ -144,7 +142,7 @@ def extract_answer_and_ground_truth(text_response):
 
     return answer, ground_truth
 
-def prepare_claude_3_vision_prompt(query, encoded_images):
+def prepare_bedrock_vision_prompt(query, encoded_images):
     ANSWER_TAG = "ANSWER"
     GROUND_TRUTH_TAG = "GROUND"
     QUESTION_TAG = "QUESTION"
@@ -207,7 +205,7 @@ def prepare_textract_prompt(query, text_data):
 
     return prompt, system_prompt
 
-def prepare_claude_3_vision_and_textract_prompt(query, encoded_images, all_text):
+def prepare_bedrock_vision_and_textract_prompt(query, encoded_images, all_text):
     ANSWER_TAG = "ANSWER"
     GROUND_TRUTH_TAG = "GROUND"
     QUESTION_TAG = "QUESTION"
@@ -246,27 +244,26 @@ def prepare_claude_3_vision_and_textract_prompt(query, encoded_images, all_text)
 
 def run_tool_use(tool_config, all_text, query, model_id):
     prompt, system_prompt = prepare_textract_prompt(query, all_text)
-    response_text, _ = call_claude_3_model(prompt, system_prompt, model_id, tool_config)
+    response_text, _ = call_bedrock_model(prompt, system_prompt, model_id, tool_config)
     return response_text
 
 def search_and_answer_pdf(file_path, query, ocr_tool, model_id):
     all_text = create_or_retrieve_textract_file(file_path)
-    assert ocr_tool in ["Claude 3 Vision (Experimental)", "Claude 3 Vision & Textract (Experimental)", "Textract"]
-    if ocr_tool == "Claude 3 Vision (Experimental)":
-        print("Passing images to Claude 3 Vision as OCR")
+    if "Vision (Experimental)" in ocr_tool:
+        print(f"Passing images to {model_id} Vision as OCR")
         encoded_images = encode_pdf_to_base64(file_path)
-        prompt, system_prompt = prepare_claude_3_vision_prompt(query, encoded_images)
-    elif ocr_tool == "Claude 3 Vision & Textract (Experimental)":
-        print("Passing images to Claude 3 Vision as OCR and Textract as OCR")
+        prompt, system_prompt = prepare_bedrock_vision_prompt(query, encoded_images)
+    elif "Vision & Textract (Experimental)" in ocr_tool:
+        print(f"Passing images to {model_id} Vision as OCR and Textract as OCR")
         encoded_images = encode_pdf_to_base64(file_path)
-        prompt, system_prompt = prepare_claude_3_vision_and_textract_prompt(query, encoded_images, all_text)
+        prompt, system_prompt = prepare_bedrock_vision_and_textract_prompt(query, encoded_images, all_text)
     elif ocr_tool == "Textract": 
-        print("Passing images to Claude 3 using Textract as OCR")
+        print(f"Passing images to {model_id} using Textract as OCR")
         prompt, system_prompt = prepare_textract_prompt(query, all_text)
     else: 
         print("Not a valid OCR tool selection")
     
-    response_text, token_usage = call_claude_3_model(prompt, system_prompt, model_id)
+    response_text, token_usage = call_bedrock_model(prompt, system_prompt, model_id)
     answer, ground_truth = extract_answer_and_ground_truth(response_text)
     return answer, ground_truth, all_text, token_usage
 
