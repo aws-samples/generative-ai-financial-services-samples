@@ -1,3 +1,4 @@
+from pathlib import Path
 import re
 import platform
 import boto3
@@ -6,8 +7,10 @@ import textractcaller as tc
 from textractprettyprinter.t_pretty_print import get_text_from_layout_json
 import os
 import pypdfium2 as pdfium
-import nltk
-nltk.download('stopwords')
+from utils.nltk_stopword import check_nltk_package
+from utils.utils_os import read_document
+
+check_nltk_package('stopwords')
 
 # Ensure that the Python version is compatible with the requirements
 def validate_environment():
@@ -108,12 +111,12 @@ def encode_pdf_to_base64(file_path):
         })
     return encoded_messages
 
-def call_bedrock_model(prompt, system_prompt, model_id, tool_config=None):
+def call_bedrock_model(content: list, system_prompt: str, model_id: str, tool_config: dict = None):
     bedrock_rt = boto3.client("bedrock-runtime")
     inference_config = {"maxTokens": 4096, "temperature": 0, "topP": 1}
     params = {
         "modelId": model_id,
-        "messages": [{"role": "user", "content": prompt}], 
+        "messages": [{"role": "user", "content": content}], 
         "inferenceConfig": inference_config
         }
     if system_prompt:
@@ -124,12 +127,12 @@ def call_bedrock_model(prompt, system_prompt, model_id, tool_config=None):
     response = bedrock_rt.converse(**params)
     # Token Usage
     token_usage = response['usage']
-    content = response['output']['message']['content'][0]
+    content_response = response['output']['message']['content'][0]
     # Detect Tool Use
     if response["stopReason"] == "tool_use":
-        response_text = content['toolUse']['input']
+        response_text = content_response['toolUse']['input']
     else:
-        response_text = content["text"]
+        response_text = content_response["text"]
 
     return response_text, token_usage
 
@@ -205,6 +208,44 @@ def prepare_textract_prompt(query, text_data):
 
     return prompt, system_prompt
 
+def prepare_docblock_prompt(query, text_data, file_format):
+    ANSWER_TAG = "ANSWER"
+    GROUND_TRUTH_TAG = "GROUND"
+    QUESTION_TAG = "QUESTION"
+
+    prompt = [
+        {
+            "text": f"""Below is the user question:
+                <{QUESTION_TAG}>
+                {query}
+                </{QUESTION_TAG}>
+
+                Given the question provided within the <{QUESTION_TAG}> XML tag, please answer the question using the 'Document 1' provided.
+                """
+        },
+        {
+            "document": {
+                "name": "Document 1",
+                "format": file_format,  # "pdf | csv | doc | docx | xls | xlsx | html | txt | md"
+                "source": {
+                    "bytes": text_data #Look Ma, no base64 encoding!
+                }
+            }
+        }
+    ]
+    
+    print("DocumentBlock", prompt)
+
+    system_prompt = f"""You are a document analysis specialist and expert forensic document examiner.
+                Please answer the user question in the <{QUESTION_TAG}> XML tag.
+                Please give the answer formatted with markdown in the <{ANSWER_TAG}> XML tag. 
+                Then provide the key words of the answer in a <{GROUND_TRUTH_TAG}> XML tag. 
+                If the data the question asks for is not in the DATA then say I don't know and give an explanation why. 
+                Leave the ground truth empty if you don't know. 
+                """
+
+    return prompt, system_prompt
+
 def prepare_bedrock_vision_and_textract_prompt(query, encoded_images, all_text):
     ANSWER_TAG = "ANSWER"
     GROUND_TRUTH_TAG = "GROUND"
@@ -248,7 +289,20 @@ def run_tool_use(tool_config, all_text, query, model_id):
     return response_text
 
 def search_and_answer_pdf(file_path, query, ocr_tool, model_id):
-    all_text = create_or_retrieve_textract_file(file_path)
+    supported_formats = ['pdf', 'csv', 'doc', 'docx', 'xls', 'xlsx', 'html', 'txt', 'md']
+    
+    extension_file = Path(file_path).suffix
+    file_format = extension_file.replace('.', '')
+    
+    assert (
+        (ocr_tool == "Converse API - DocumentBlock (Experimental)" and file_format in supported_formats) or 
+        (ocr_tool != "Converse API - DocumentBlock (Experimental)" and file_format == 'pdf')
+    ), f"File format '{file_format}' not supported for {ocr_tool}"
+
+    if ocr_tool != "Converse API - DocumentBlock (Experimental)":
+        all_text = create_or_retrieve_textract_file(file_path)
+    else:
+        all_text = read_document(file_path)
     if "Vision (Experimental)" in ocr_tool:
         print(f"Passing images to {model_id} Vision as OCR")
         encoded_images = encode_pdf_to_base64(file_path)
@@ -260,6 +314,8 @@ def search_and_answer_pdf(file_path, query, ocr_tool, model_id):
     elif ocr_tool == "Textract": 
         print(f"Passing images to {model_id} using Textract as OCR")
         prompt, system_prompt = prepare_textract_prompt(query, all_text)
+    elif ocr_tool == "Converse API - DocumentBlock (Experimental)":
+        prompt, system_prompt = prepare_docblock_prompt(query, all_text, file_format)
     else: 
         print("Not a valid OCR tool selection")
     
@@ -307,7 +363,7 @@ def process_pdf_with_textract(file_path, bucket_name):
 
     return all_text
 
-def upload_pdf_to_s3(file_path, bucket_name, s3_key):
+def upload_doc_to_s3(file_path, bucket_name, s3_key):
     s3 = boto3.client('s3')
     s3.upload_file(
         Filename=file_path,
@@ -332,7 +388,7 @@ def create_or_retrieve_textract_file(file_path):
         all_text = download_text_file_from_s3(bucket_name, s3_key)
     else:
         print(f"Text file {s3_key} does not exist in bucket {bucket_name}. Processing and uploading.")
-        upload_pdf_to_s3(file_path, bucket_name, os.path.basename(file_path))
+        upload_doc_to_s3(file_path, bucket_name, os.path.basename(file_path))
         all_text = process_pdf_with_textract(file_path, bucket_name)
         upload_text_to_s3(all_text, bucket_name, s3_key)
 

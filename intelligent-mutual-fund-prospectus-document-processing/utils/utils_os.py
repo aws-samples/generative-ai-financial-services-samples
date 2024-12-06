@@ -5,6 +5,12 @@ import yaml
 import glob, shutil
 from typing import List
 
+# Function to read a document return its contents as bytes
+def read_document(path):
+    with open(path, "rb") as doc_file:
+        doc_bytes = doc_file.read()
+    return doc_bytes
+
 # Function to read a YAML file and return its contents
 def read_yaml(path):
     try:

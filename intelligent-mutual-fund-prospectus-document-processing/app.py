@@ -1,4 +1,6 @@
 import os
+import pandas as pd
+from pathlib import Path
 from botocore.exceptions import ClientError
 import streamlit as st
 import re
@@ -272,22 +274,32 @@ def markdown_escape(text):
 def get_file_list(document_repo_file_path):
     listdocs = os.listdir(document_repo_file_path)
     relative_paths = [os.path.join(document_repo_file_path, file) for file in listdocs]
-    pdf_docs = [doc for doc in relative_paths if doc.endswith(".pdf")]
+    docs = [doc for doc in relative_paths if doc.endswith(".pdf") or doc.endswith(".xlsx")]
 
-    return pdf_docs
+    return docs
 
 
-def displayPDF(file):
+def displayDoc(file):
     try:
+        extension_file = Path(file).suffix
+        file_format = extension_file.replace('.', '')
+        print("extension_file", file)
+        print("extension_file", file_format)
+        
         # Opening file from file path
         with open(file, "rb") as f:
             base64_pdf = base64.b64encode(f.read()).decode("utf-8")
 
-        # Embedding PDF in HTML
-        pdf_display = f'<embed src="data:application/pdf;base64,{base64_pdf}" width="100%" height="850" type="application/pdf">'
-
-        # Displaying File
-        st.markdown(pdf_display, unsafe_allow_html=True)
+        if file_format == "pdf":
+            # Embedding PDF in HTML
+            pdf_display = f'<embed src="data:application/pdf;base64,{base64_pdf}" width="100%" height="850" type="application/pdf">'
+            # Displaying File
+            st.markdown(pdf_display, unsafe_allow_html=True)
+        
+        elif file_format == "xlsx":
+            dataframe = pd.read_excel(file)
+            st.write(dataframe)
+            
     except Exception as e:
         st.error(f"Failed to display PDF: {e}")
         print(f"Failed to display PDF: {e}")  # For debugging in server logs
@@ -324,7 +336,7 @@ def main():
     
     with col2:
         # Select OCR Tool
-        ocr_tools = ["Textract", f"{model_providers[st.session_state.modelProvider]['model']} Vision (Experimental)", f"{model_providers[st.session_state.modelProvider]['model']} Vision & Textract (Experimental)"]
+        ocr_tools = ["Textract",f"{model_providers[st.session_state.modelProvider]['model']} Vision (Experimental)", f"{model_providers[st.session_state.modelProvider]['model']} Vision & Textract (Experimental)", "Converse API - DocumentBlock (Experimental)"]
         st.session_state.ocr_tool = st.selectbox("Select OCR Tool", ocr_tools)
         if (st.session_state.ocr_tool != "Textract") and (st.session_state.modelProvider == "Amazon Nova"):
             compatible_models.remove('us.amazon.nova-micro-v1:0')
@@ -353,16 +365,16 @@ def main():
     col1, col2 = st.columns([1.5, 2.0])
     # Define doc_source_nm early on to ensure it's available when needed
     with col1:  # Right side - Only the full PDF display
-        pdf_docs = get_file_list(document_repo_file_path)
+        all_docs = get_file_list(document_repo_file_path)
 
-        doc_path = st.selectbox("Select doc", pdf_docs, key="pdf_selector", index=0)
+        doc_path = st.selectbox("Select doc", all_docs, key="doc_selector", index=0)
 
-        uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
+        uploaded_file = st.file_uploader("Choose a file", type=['pdf', 'xlsx'])
         if uploaded_file is not None:
             save_uploaded_file(uploaded_file, upload_dir=document_repo_file_path)
 
-        if doc_path.lower().endswith(".pdf"):
-            displayPDF(doc_path)
+        if doc_path.lower().endswith(".pdf") or doc_path.lower().endswith(".xlsx"):
+            displayDoc(doc_path)
             
 
     with col2:  # Left side - All settings and displays except the full PDF

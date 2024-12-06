@@ -26,6 +26,34 @@
           }
       ]
     }
+- type: Financial Definitions
+  prompt: What is the short definition for the Indicator Code 'GFDD.AI.01'?
+  toolConfig: |
+    {
+      "toolChoice": {
+          "tool": {"name":"mutual_fund_json"}
+      },
+      "tools": [
+          {
+              "toolSpec": {
+                  "name": "mutual_fund_json",
+                  "description": "Schema for extracting key information from mutual fund docs",
+                  "inputSchema": {
+                      "json": {
+                          "type": "object",
+                          "properties": {
+                              "short_definition": {
+                                  "type": "string",
+                                  "description": "Short definition for Inidicator Code"
+                              }
+                          },
+                          "required": ["short_definition"]
+                      }
+                  }
+              }
+          }
+      ]
+    }
 - type: CUSIP
   prompt: What is the fund's CUSIP? This is a string that matches regular expression /\\s[0-9][0-9A-Z]{8}\\s/ . If the document includes more than one, then list them all, in order of appearance.
   toolConfig: |
