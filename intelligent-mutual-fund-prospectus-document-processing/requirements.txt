@@ -11,3 +11,5 @@ pdfplumber
 python-dotenv
 pypdfium2
 amazon-textract-textractor
+amazon-textract-prettyprinter
+openpyxl
