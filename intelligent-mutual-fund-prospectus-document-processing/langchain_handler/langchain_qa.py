@@ -234,8 +234,6 @@ def prepare_docblock_prompt(query, text_data, file_format):
         }
     ]
     
-    print("DocumentBlock", prompt)
-
     system_prompt = f"""You are a document analysis specialist and expert forensic document examiner.
                 Please answer the user question in the <{QUESTION_TAG}> XML tag.
                 Please give the answer formatted with markdown in the <{ANSWER_TAG}> XML tag. 

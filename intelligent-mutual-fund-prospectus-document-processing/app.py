@@ -283,8 +283,6 @@ def displayDoc(file):
     try:
         extension_file = Path(file).suffix
         file_format = extension_file.replace('.', '')
-        print("extension_file", file)
-        print("extension_file", file_format)
         
         # Opening file from file path
         with open(file, "rb") as f:
