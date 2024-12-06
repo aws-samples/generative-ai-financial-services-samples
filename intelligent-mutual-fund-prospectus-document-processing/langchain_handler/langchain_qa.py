@@ -228,7 +228,7 @@ def prepare_docblock_prompt(query, text_data, file_format):
                 "name": "Document 1",
                 "format": file_format,  # "pdf | csv | doc | docx | xls | xlsx | html | txt | md"
                 "source": {
-                    "bytes": text_data #Look Ma, no base64 encoding!
+                    "bytes": text_data
                 }
             }
         }
