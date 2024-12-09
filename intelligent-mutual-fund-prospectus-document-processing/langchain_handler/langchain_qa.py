@@ -65,8 +65,8 @@ def amazon_bedrock_models():
             "temperature": 0.0,
             "topP": .999,
             "maxTokens": 4096,
-            "inputTokenCost": 0.001,
-            "outputTokenCost": 0.005
+            "inputTokenCost": 0.0008,
+            "outputTokenCost": 0.004
         },
         "us.anthropic.claude-3-sonnet-20240229-v1:0": {
             "temperature": 0.0,
