@@ -3,6 +3,7 @@ import pandas as pd
 from pathlib import Path
 from botocore.exceptions import ClientError
 import streamlit as st
+from utils.auth import Auth
 import re
 import json
 import base64
@@ -68,8 +69,23 @@ def timeout_decorator(seconds=10):
 if "BUCKET_NAME" not in os.environ:
     raise Exception("S3 Bucket must be set for Textract processing. Please see README for more information")
 
+if "SECRET_NAME" not in os.environ:
+    raise Exception("Secret must be set for authentication in Cognito. Please see README for more information")
+
 # Set page title
 st.set_page_config(page_title="Q/A App", layout="wide")
+
+# Initialise CognitoAuthenticator
+authenticator = Auth.get_authenticator(os.environ['SECRET_NAME'])
+
+# Authenticate user, and stop here if not logged in
+is_logged_in = authenticator.login()
+if not is_logged_in:
+    st.stop()
+
+def logout():
+    # Set page title
+    authenticator.logout()
 
 def synthesize_speech(text, voice_id):
     polly_client = boto3.Session().client('polly')

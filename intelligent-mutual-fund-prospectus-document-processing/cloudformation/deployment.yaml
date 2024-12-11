@@ -1,0 +1,415 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: A CloudFormation template to deploy an IDP app on EC2
+
+Parameters:
+  BucketName:
+    Type: String
+    Description: 'Name for new S3 bucket for uploading documents'
+    Default: ''
+    AllowedPattern: '^[a-z0-9][a-z0-9.-]*[a-z0-9]$|^$'
+    ConstraintDescription: 'Bucket name must be lowercase and can contain dots and hyphens'
+    MaxLength: 63
+    MinLength: 0
+  Ec2InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t3.small
+      - t3.medium
+      - t3.xlarge
+      - t3.2xlarge
+  ExistingVpcId:
+    Type: String
+    Description: 'Optional - Existing VPC ID. Leave empty to create a new VPC'
+    Default: ''
+    AllowedPattern: '^(vpc-[a-z0-9]{8,})?$'
+    ConstraintDescription: 'Must be a valid VPC ID or empty'
+  VpcCidrBlock:
+    Type: String
+    Description: 'CIDR block for the VPC (only used if creating new VPC)'
+    Default: '10.4.0.0/16'
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$'
+    ConstraintDescription: 'Must be a valid IPv4 CIDR block'
+  PublicSubnet1Cidr:
+    Type: String
+    Description: 'CIDR block for public subnet 1 (only used if creating new VPC)'
+    Default: '10.4.1.0/24'
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$'
+  PublicSubnet2Cidr:
+    Type: String
+    Description: 'CIDR block for public subnet 2 (only used if creating new VPC)'
+    Default: '10.4.2.0/24'
+    AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$'
+
+Conditions:
+  CreateNewVPC: !Equals [!Ref ExistingVpcId, '']
+
+Mappings:
+  AMIRegionMap: # Ubuntu Server 24.04 LTS (HVM),EBS General Purpose (SSD) Volume Type
+    us-east-1:
+      ami: ami-0e2c8caa4b6378d8c
+    us-west-2:
+      ami: ami-05d38da78ce859165
+
+Resources:
+# S3 Bucket with simplified configuration
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-bucket'
+  # VPC
+  VPC:
+    Type: AWS::EC2::VPC
+    Condition: CreateNewVPC
+    Properties:
+      CidrBlock: !Ref VpcCidrBlock
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-vpc'
+ # Internet Gateway
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Condition: CreateNewVPC
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-igw'
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Condition: CreateNewVPC
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+
+# Public Subnets
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Condition: CreateNewVPC
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnet1Cidr
+      AvailabilityZone: !Select [0, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public-subnet-1'
+
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Condition: CreateNewVPC
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: !Ref PublicSubnet2Cidr
+      AvailabilityZone: !Select [1, !GetAZs '']
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public-subnet-2'
+
+  # Public Route Table
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Condition: CreateNewVPC
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub '${AWS::StackName}-public-rt'
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Condition: CreateNewVPC
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateNewVPC
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: CreateNewVPC
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+  
+  # EC2 Firewall
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for an IDP app in a EC2 instance
+      VpcId: !If [CreateNewVPC, !Ref VPC, !Ref ExistingVpcId]
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: Allow incoming HTTP traffic from the specified CIDR block
+      Tags:
+        - Key: Name
+          Value: Intelligent-Document-Processing
+
+  # CloudFormation condition
+  InstallWaitHandle:
+    Type: AWS::CloudFormation::WaitConditionHandle
+
+  InstallWaitCondition:
+    Type: AWS::CloudFormation::WaitCondition
+    DependsOn: EC2Instance
+    Properties:
+      Handle: !Ref InstallWaitHandle
+      Timeout: 420
+      Count: 1
+
+  # Sessions Manager Role
+  SSMIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonTextractFullAccess
+        - arn:aws:iam::aws:policy/AmazonBedrockFullAccess
+        - arn:aws:iam::aws:policy/ComprehendFullAccess
+        - arn:aws:iam::aws:policy/AmazonPollyFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/SecretsManagerReadWrite
+
+  EC2InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref SSMIAMRole
+
+# Cognito User Pool
+  CognitoUserPool:
+    Type: 'AWS::Cognito::UserPool'
+    Properties:
+      UserPoolName: !Sub ${AWS::StackName}-user-pool
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+      AutoVerifiedAttributes:
+        - email
+      UsernameAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          RequireUppercase: true
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Mutable: true
+          Required: true
+      EmailVerificationMessage: 'Your verification code is {####}'
+      EmailVerificationSubject: 'Your verification code'
+
+  # User Pool Client
+  CognitoUserPoolClient:
+    Type: 'AWS::Cognito::UserPoolClient'
+    Properties:
+      UserPoolId: !Ref CognitoUserPool
+      ClientName: !Sub ${AWS::StackName}-app-client
+      GenerateSecret: true  # Changed to true to generate a client secret
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_PASSWORD_AUTH
+
+  # Secrets Manager Secret
+  CognitoSecret:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Name: !Sub ${AWS::StackName}-cognito-credentials
+      Description: 'Cognito credentials for user and identity pools'
+      SecretString: !Sub |
+        {
+          "userPoolId": "${CognitoUserPool}",
+          "appClientId": "${CognitoUserPoolClient}",
+          "appClientSecret": "${CognitoUserPoolClient.ClientSecret}"
+        }
+
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      IamInstanceProfile: !Ref EC2InstanceProfile
+      InstanceType: !Ref Ec2InstanceType
+      ImageId: !FindInMap
+        - AMIRegionMap
+        - !Ref "AWS::Region"
+        - ami
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 30
+            VolumeType: gp3
+      SubnetId: !If 
+        - CreateNewVPC
+        - !Ref PublicSubnet1
+        - !Ref 'AWS::NoValue'
+      Tags:
+        - Key: Name
+          Value: Intelligent-Document-Processing
+      SecurityGroupIds: 
+        - !GetAtt SecurityGroup.GroupId
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash -x
+
+          sudo apt-get update
+          sudo apt-get upgrade -y
+          sudo apt install wget git python3 python3-venv unzip -y
+
+          # Install git-lfs without installing apache2
+          curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
+          apt --fix-broken install -y
+          sudo apt-get install git-lfs
+          sudo -u ubuntu git lfs install --skip-smudge
+
+          # Install python 3.10
+          add-apt-repository ppa:deadsnakes/ppa -y
+          apt-get install python3.11 python3.11-venv python3.11-dev -y
+
+          # Clone idp repository
+          cd /home/ubuntu
+          git clone https://github.com/arm-diaz/generative-ai-financial-services-samples.git
+          git checkout idp-converse-api
+
+          # Install aws-cli
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+          aws configure set region ${AWS::Region}
+          
+          # Install conda
+          mkdir env
+          cd env
+          curl -sL "https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh" > "Miniconda3.sh"
+          bash Miniconda3.sh -b -u -p ./
+          bin/conda init bash
+          source etc/profile.d/conda.sh
+
+          # Create virtual environment
+          conda create -n financialqaenv python=3.11 -y
+          conda activate financialqaenv
+
+          # Install dependencies
+          cd ../generative-ai-financial-services-samples/intelligent-mutual-fund-prospectus-document-processing
+          pip install -r requirements.txt
+
+          export BUCKET_NAME=${BucketName}
+          export SECRET_NAME=${AWS::StackName}-cognito-credentials
+
+          # Run streamlit
+          nohup streamlit run app.py --server.port 80 --browser.gatherUsageStats false > output.txt &
+          curl -X PUT -H 'Content-Type:' --data-binary '{"Status" : "SUCCESS","Reason" : "Configuration Complete","UniqueId" : "EC2Instance","Data" : "Application has completed configuration."}' "${InstallWaitHandle}"
+
+  EIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Tags:
+        - Key: Name
+          Value: Intelligent-Document-Processing
+
+  EIPAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt EIP.AllocationId
+      InstanceId: !Ref EC2Instance
+
+Outputs:
+  WebUiURL:
+    Description: URL for Intelligent Document Processing Web Application (available in 10 mins)
+    Value: !Sub "http://${EIP}"
+  VpcId:
+    Description: 'VPC ID'
+    Value: !If [CreateNewVPC, !Ref VPC, !Ref ExistingVpcId]
+
+  PublicSubnet1Id:
+    Description: 'Public Subnet 1 ID'
+    Value: !If [CreateNewVPC, !Ref PublicSubnet1, 'N/A']
+    Condition: CreateNewVPC
+
+  PublicSubnet2Id:
+    Description: 'Public Subnet 2 ID'
+    Value: !If [CreateNewVPC, !Ref PublicSubnet2, 'N/A']
+    Condition: CreateNewVPC
+
+  EC2InstanceId:
+    Description: 'EC2 Instance ID'
+    Value: !Ref EC2Instance
+
+  EC2PublicIP:
+    Description: 'EC2 Instance Public IP'
+    Value: !GetAtt EC2Instance.PublicIp
+
+  EC2PrivateIP:
+    Description: 'EC2 Instance Private IP'
+    Value: !GetAtt EC2Instance.PrivateIp
+
+  S3BucketName:
+    Description: 'S3 Bucket Name'
+    Value: !Ref S3Bucket
+  
+  S3BucketArn:
+    Description: 'S3 Bucket ARN'
+    Value: !GetAtt S3Bucket.Arn
+
+  UserPoolId:
+    Description: 'ID of the Cognito User Pool'
+    Value: !Ref CognitoUserPool
+    Export:
+      Name: !Sub ${AWS::StackName}-UserPoolId
+
+  UserPoolClientId:
+    Description: 'ID of the Cognito User Pool Client'
+    Value: !Ref CognitoUserPoolClient
+    Export:
+      Name: !Sub ${AWS::StackName}-UserPoolClientId
+
+  IdentityPoolId:
+    Description: 'ID of the Cognito Identity Pool'
+    Value: !Ref CognitoIdentityPool
+    Export:
+      Name: !Sub ${AWS::StackName}-IdentityPoolId
+
+  SecretId:
+    Description: 'ID of the Secret storing Cognito credentials'
+    Value: !Sub ${AWS::StackName}-cognito-credentials
+    Export:
+      Name: !Sub ${AWS::StackName}-SecretId
