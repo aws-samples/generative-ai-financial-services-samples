@@ -17,9 +17,9 @@ class Auth:
             SecretId=secret_id,
         )
         secret_string = json.loads(response['SecretString'])
-        pool_id = secret_string['pool_id']
-        app_client_id = secret_string['app_client_id']
-        app_client_secret = secret_string['app_client_secret']
+        pool_id = secret_string['userPoolId']
+        app_client_id = secret_string['appClientId']
+        app_client_secret = secret_string['appClientSecret']
 
         # Initialise CognitoAuthenticator
         authenticator = CognitoAuthenticator(

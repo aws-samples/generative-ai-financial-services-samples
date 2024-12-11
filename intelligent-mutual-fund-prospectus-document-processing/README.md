@@ -97,7 +97,7 @@ export BUCKET_NAME=$BUCKET_NAME
 
 ### Cognito Authentication
 
-Please create a User Pool with a unique name and store the "pool_id", "app_client_id", and "app_client_secret" in Secrets Manager. Then save the Secrets ID as an env variable called "SECRET_NAME" before running `run.sh`.
+Please create a User Pool with a unique name and store the "userPoolId", "appClientId", and "appClientSecret" in Secrets Manager. Then save the Secrets ID as an env variable called "SECRET_NAME" before running `run.sh`.
 
 Then you can set env. var as:
 
