@@ -308,7 +308,6 @@ Resources:
           # Clone idp repository
           cd /home/ubuntu
           git clone https://github.com/arm-diaz/generative-ai-financial-services-samples.git
-          git checkout idp-converse-api
 
           # Install aws-cli
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
@@ -330,6 +329,7 @@ Resources:
 
           # Install dependencies
           cd ../generative-ai-financial-services-samples/intelligent-mutual-fund-prospectus-document-processing
+          git checkout idp-converse-api
           pip install -r requirements.txt
 
           export BUCKET_NAME=${BucketName}
