@@ -402,12 +402,6 @@ Outputs:
     Export:
       Name: !Sub ${AWS::StackName}-UserPoolClientId
 
-  IdentityPoolId:
-    Description: 'ID of the Cognito Identity Pool'
-    Value: !Ref CognitoIdentityPool
-    Export:
-      Name: !Sub ${AWS::StackName}-IdentityPoolId
-
   SecretId:
     Description: 'ID of the Secret storing Cognito credentials'
     Value: !Sub ${AWS::StackName}-cognito-credentials
