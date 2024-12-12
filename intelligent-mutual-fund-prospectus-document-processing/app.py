@@ -469,7 +469,7 @@ def main():
         
         # Display Pricing only when Bedrock returns a response
         if response:
-            with st.expander("Amazon Bedrock Pricing", expanded=True):
+            with st.expander("Amazon Bedrock Token Details", expanded=True):
 
                 print("PRICING RESPONSE:", token_usage)
                 
@@ -477,7 +477,9 @@ def main():
                 output_token_cost = token_usage['outputTokens'] * amazon_bedrock_models()[st.session_state.modelID]['outputTokenCost'] / 1000
                 cost = round(input_token_cost + output_token_cost, 5)
 
-                st.write(f"**Cost**: ${cost}")
+                st.write(f"**# of Input Tokens**: {token_usage['inputTokens']}")
+                st.write("\n")
+                st.write(f"**# of Output Tokens**: {token_usage['outputTokens']}")
                 st.write("\n")
 
         # Run Tool Use with Bedrock Response to keep consistency between the text response and the json format
@@ -485,7 +487,7 @@ def main():
             with st.expander("Tool Use (Bedrock)", expanded=True):
                 with st.spinner("Processing Query with Tool Use (Bedrock)"):
                     try:
-                        tool_config = json.loads([row["toolConfig"] for row in data if row['prompt'] == question][0])
+                        tool_config = [row["toolConfig"] for row in data if row['prompt'] == question][0]
                         
                         if st.session_state.modelProvider in ["Amazon Nova", "Meta"]:
                             tool_config.pop('toolChoice', None)
