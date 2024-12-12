@@ -1,11 +1,16 @@
 import nltk
+from nltk.data import find
 
-try:
-    # Check if stopwords are present
-    print("Checking if NLTK stopwords (english) are already downloaded")
-    print("NLTK stopwords (english) found")
-except LookupError:
-    # If not present, download them
-    print("NLTK stopwords (english) NOT found. downloading...")
-    nltk.download("stopwords")
-    print("NLTK stopwords (english) download complete")
+
+def check_nltk_package(package_name):
+    """
+    Check if an NLTK package is already downloaded.
+    Returns True if downloaded, False if not.
+    """
+    try:
+        find(f'corpora/{package_name}')
+    except LookupError:
+        nltk.download(package_name)
+
+if __name__ == "__main__":
+    check_nltk_package("stopwords")

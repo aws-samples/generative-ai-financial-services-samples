@@ -1,16 +1,18 @@
 import os
+import pandas as pd
+from pathlib import Path
 from botocore.exceptions import ClientError
 import streamlit as st
-import yaml
+from utils.auth import Auth
 import re
+import json
 import base64
 from langchain_handler.langchain_qa import (
     search_and_answer_pdf,
     validate_environment,
     amazon_bedrock_models,
+    run_tool_use
 )
-from data_handlers.doc_source import DocSource, InMemoryAny
-from data_handlers.labels import load_labels_master, load_labels
 from utils.utils_text import (
     spans_of_tokens_ordered,
     spans_of_tokens_compact,
@@ -18,20 +20,72 @@ from utils.utils_text import (
     text_tokenizer,
 )
 from utils.utils_os import (
-    read_json, 
-    read_jsonl
+    read_json
 )
 import boto3
 import io
 from contextlib import closing
+
+
+import time
+import threading
+from functools import wraps
+
+def timeout_decorator(seconds=10):
+    def actual_decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            result = []
+            error = []
+            
+            def target():
+                try:
+                    result.append(func(*args, **kwargs))
+                except Exception as e:
+                    error.append(e)
+            
+            thread = threading.Thread(target=target)
+            start_time = time.time()
+            thread.start()
+            thread.join(timeout=seconds)
+            
+            execution_time = time.time() - start_time
+            print(f"Function '{func.__name__}' took {execution_time:.2f} seconds")
+            
+            if thread.is_alive():
+                thread.join(timeout=0)  # Clean up the thread
+                raise TimeoutError(f"Function execution timed out after {seconds} seconds")
+            
+            if error:
+                raise error[0]
+                
+            return result[0] if result else None
+            
+        return wrapper
+    return actual_decorator
 
 # check if an env variable called BUCKET_NAME is existing
 # if yes, continue, else error out and say "S3 Bucket must be set for Textract processing. Please see README for more information"
 if "BUCKET_NAME" not in os.environ:
     raise Exception("S3 Bucket must be set for Textract processing. Please see README for more information")
 
+if "SECRET_NAME" not in os.environ:
+    raise Exception("Secret must be set for authentication in Cognito. Please see README for more information")
+
 # Set page title
 st.set_page_config(page_title="Q/A App", layout="wide")
+
+# Initialise CognitoAuthenticator
+authenticator = Auth.get_authenticator(os.environ['SECRET_NAME'])
+
+# Authenticate user, and stop here if not logged in
+is_logged_in = authenticator.login()
+if not is_logged_in:
+    st.stop()
+
+def logout():
+    # Set page title
+    authenticator.logout()
 
 def synthesize_speech(text, voice_id):
     polly_client = boto3.Session().client('polly')
@@ -143,6 +197,10 @@ st.markdown(content_css, unsafe_allow_html=True)
 def check_env():
     # Validate the environment for the langchain QA model
     validate_environment()
+    
+def list_model_providers():
+    providers = {"Anthropic": {"provider": "anthropic", "model": "Claude 3"}, "Amazon Nova": {"provider": "amazon", "model": "Nova"}, "Meta": {"provider": "meta", "model": "Llama 3.2"}}
+    return providers
 
 @st.cache_data
 def list_llm_models():
@@ -193,7 +251,7 @@ def markdown_naive(text, tokens, bg_color=None):
     text = text.replace("$", "\\$")
     return text
 
-
+@timeout_decorator(seconds=10)
 def markdown2(text, tokens, fg_color=None, bg_color=None):
     """
     The exact match of answer may not be the possible.
@@ -232,26 +290,33 @@ def markdown_escape(text):
 def get_file_list(document_repo_file_path):
     listdocs = os.listdir(document_repo_file_path)
     relative_paths = [os.path.join(document_repo_file_path, file) for file in listdocs]
-    pdf_docs = [doc for doc in relative_paths if doc.endswith(".pdf")]
+    docs = [doc for doc in relative_paths if doc.endswith(".pdf") or doc.endswith(".xlsx")]
 
-    return pdf_docs
+    return docs
 
 
-def displayPDF(file):
+def displayDoc(file):
     try:
+        extension_file = Path(file).suffix
+        file_format = extension_file.replace('.', '')
+        
         # Opening file from file path
         with open(file, "rb") as f:
             base64_pdf = base64.b64encode(f.read()).decode("utf-8")
 
-        # Embedding PDF in HTML
-        pdf_display = f'<embed src="data:application/pdf;base64,{base64_pdf}" width="100%" height="850" type="application/pdf">'
-
-        # Displaying File
-        st.markdown(pdf_display, unsafe_allow_html=True)
+        if file_format == "pdf":
+            # Embedding PDF in HTML
+            pdf_display = f'<embed src="data:application/pdf;base64,{base64_pdf}" width="100%" height="850" type="application/pdf">'
+            # Displaying File
+            st.markdown(pdf_display, unsafe_allow_html=True)
+        
+        elif file_format == "xlsx":
+            dataframe = pd.read_excel(file)
+            st.write(dataframe)
+            
     except Exception as e:
         st.error(f"Failed to display PDF: {e}")
         print(f"Failed to display PDF: {e}")  # For debugging in server logs
-
 
 # The main function where the Streamlit app logic resides
 def main():
@@ -263,6 +328,8 @@ def main():
     # Select a language model from the available options
 
     # Initialize session state variables
+    if "modelProvider" not in st.session_state:
+        st.session_state.modelProvider = None
     if "modelID" not in st.session_state:
         st.session_state.modelID = None
     if "claude3direct" not in st.session_state:
@@ -271,23 +338,34 @@ def main():
         st.session_state.file_list = []
 
     
+    col1, col2, col3, col4 = st.columns([1.8, 1.5, 1.8, 1.5])
+    with col1: 
+        model_providers = list_model_providers()
+        model_provider = st.selectbox("Select Model Provider", list(model_providers.keys()))
+
+        # Update session state variables
+        st.session_state.modelProvider = model_provider
+        
+    compatible_models = [model for model in list_llm_models() if model_providers[st.session_state.modelProvider]['provider'] in model]
     
-    col1, col2, col3 = st.columns([2.0, 2.2, 2.0])
-    with col1:
+    with col2:
         # Select OCR Tool
-        st.session_state.ocr_tool = st.selectbox("Select OCR Tool", ["Textract", "Claude 3 Vision (Experimental)", "Claude 3 Vision & Textract (Experimental)"])
-        compatible_models = []
-        if st.session_state.ocr_tool == "Textract":
-            compatible_models = [model for model in list_llm_models()]
-        else:
-            compatible_models = ["anthropic.claude-3-sonnet-20240229-v1:0", "anthropic.claude-3-5-sonnet-20240620-v1:0", "anthropic.claude-3-haiku-20240307-v1:0"]
-    with col2: 
+        ocr_tools = ["Textract",f"{model_providers[st.session_state.modelProvider]['model']} Vision (Experimental)", f"{model_providers[st.session_state.modelProvider]['model']} Vision & Textract (Experimental)", "Converse API - DocumentBlock (Experimental)"]
+        if (st.session_state.modelProvider == "Meta"):
+            ocr_tools = [ocr_tools[0], ocr_tools[-1]]
+        st.session_state.ocr_tool = st.selectbox("Select Document Reader Tool", ocr_tools)
+        if (st.session_state.ocr_tool != "Textract") and (st.session_state.modelProvider == "Amazon Nova"):
+            compatible_models.remove('us.amazon.nova-micro-v1:0')
+        if (st.session_state.ocr_tool not in ["Textract", "Converse API - DocumentBlock (Experimental)"]) and (st.session_state.modelProvider == "Anthropic"):
+            compatible_models.remove('us.anthropic.claude-3-5-haiku-20241022-v1:0')
+    
+    with col3: 
         model_id = st.selectbox("Select LLM", compatible_models)
 
         # Update session state variables
         st.session_state.modelID = model_id
 
-    with col3: 
+    with col4: 
         demo_version = st.selectbox("Select Examples Version", ["Insurance Examples", "Mutual Fund Examples"])
 
         if demo_version == "Insurance Examples":
@@ -295,37 +373,40 @@ def main():
         elif demo_version == "Mutual Fund Examples":
             document_repo_file_path = './docs/mutual_fund/'
         
-        questions = read_json(document_repo_file_path + 'questions.json')
-        questions = ["Ask your question"] + list(questions.values())
+        data = read_json(document_repo_file_path + 'data.json')
+        
+        # Get questions
+        questions = ["Ask your question"] + [row['prompt'] for row in data]
         questions = [f"{i}. {q}" for i, q in enumerate(questions)]
         
-    col1, col2 = st.columns([2.2, 2.0])
+        
+    col1, col2 = st.columns([1.5, 2.0])
     # Define doc_source_nm early on to ensure it's available when needed
     with col1:  # Right side - Only the full PDF display
-        pdf_docs = get_file_list(document_repo_file_path)
+        all_docs = get_file_list(document_repo_file_path)
 
-        doc_path = st.selectbox("Select doc", pdf_docs, key="pdf_selector", index=0)
+        doc_path = st.selectbox("Select doc", all_docs, key="doc_selector", index=0)
 
-        uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
+        uploaded_file = st.file_uploader("Choose a file", type=['pdf', 'xlsx'])
         if uploaded_file is not None:
             save_uploaded_file(uploaded_file, upload_dir=document_repo_file_path)
 
-        if doc_path.lower().endswith(".pdf"):
-            displayPDF(doc_path)
+        if doc_path.lower().endswith(".pdf") or doc_path.lower().endswith(".xlsx"):
+            displayDoc(doc_path)
             
 
     with col2:  # Left side - All settings and displays except the full PDF
         # Select a language model from the available options
         with st.expander('Architecture Diagram', expanded=True): 
-            if st.session_state.ocr_tool == 'Claude 3 Vision (Experimental)':
-                st.image("./assets/claude_3_vision_diagram.png", use_column_width=True)
-            elif st.session_state.ocr_tool == 'Claude 3 Vision & Textract (Experimental)':
-                st.image("./assets/claude_3_vision_text_diagram.png", use_column_width=True)
+            if 'Vision (Experimental)' in st.session_state.ocr_tool:
+                st.image("./assets/claude_3_vision_diagram.png", use_container_width=True)
+            elif 'Vision & Textract (Experimental)' in st.session_state.ocr_tool:
+                st.image("./assets/claude_3_vision_text_diagram.png", use_container_width=True)
             else: 
-                st.image("./assets/textract_diagram.png", use_column_width=True)
+                st.image("./assets/textract_diagram.png", use_container_width=True)
 
         # Add a multiselect dropdown for Comprehend, Polly, and Textract
-        selected_services = st.multiselect("Select Additional AI Services", ["Comprehend", "Polly", "Textract"])
+        selected_services = st.multiselect("Select Additional AI Services", ["Tool Use (Bedrock)", "Textract", "Comprehend", "Polly"])
 
         
         # Handling user input for the question
@@ -360,18 +441,81 @@ def main():
 
         # code for processing the query and handling responses from Bedrock
         with st.expander("Amazon Bedrock", expanded=True):
-            with st.spinner("Processing Query with Amazon Bedrock"):
-                response, ground_truth, all_text = search_and_answer_pdf(
-                    file_path=doc_path,
-                    query=final_query,
-                    ocr_tool=st.session_state.ocr_tool, 
-                    model_id=st.session_state.modelID,
-                    )
-
+            try:
+                # Three attempts
+                for _ in range(0, 3):
+                    response, ground_truth, all_text, token_usage = search_and_answer_pdf(
+                        file_path=doc_path,
+                        query=final_query,
+                        ocr_tool=st.session_state.ocr_tool, 
+                        model_id=st.session_state.modelID,
+                        )
+                    break
+            except Exception as e:
+                ground_truth = ""
+                all_text = ""
+                token_usage = ""
+                response = ""
+                print(e)
+            
+            if response is None:
+                response = ""
+                print("BEDROCK RESPONSE WAS 'NONE'")
+                
             print("BEDROCK RESPONSE:" + response)
 
             st.write(f"**Bedrock Response**: {response}")
             st.write("\n")
+        
+        # Display Pricing only when Bedrock returns a response
+        if response:
+            with st.expander("Amazon Bedrock Token Details", expanded=True):
+
+                print("PRICING RESPONSE:", token_usage)
+                
+                input_token_cost = token_usage['inputTokens'] * amazon_bedrock_models()[st.session_state.modelID]['inputTokenCost'] / 1000
+                output_token_cost = token_usage['outputTokens'] * amazon_bedrock_models()[st.session_state.modelID]['outputTokenCost'] / 1000
+                cost = round(input_token_cost + output_token_cost, 5)
+
+                st.write(f"**# of Input Tokens**: {token_usage['inputTokens']}")
+                st.write("\n")
+                st.write(f"**# of Output Tokens**: {token_usage['outputTokens']}")
+                st.write("\n")
+
+        # Run Tool Use with Bedrock Response to keep consistency between the text response and the json format
+        if "Tool Use (Bedrock)" in selected_services:
+            with st.expander("Tool Use (Bedrock)", expanded=True):
+                with st.spinner("Processing Query with Tool Use (Bedrock)"):
+                    try:
+                        tool_config = [row["toolConfig"] for row in data if row['prompt'] == question][0]
+                        
+                        if st.session_state.modelProvider in ["Amazon Nova", "Meta"]:
+                            tool_config.pop('toolChoice', None)
+                        
+                        # Three attempts
+                        for _ in range(0, 3):
+                            tool_response = run_tool_use(
+                                tool_config=tool_config,
+                                all_text=response,
+                                query=final_query,
+                                model_id=st.session_state.modelID,
+                            )
+                            break
+                    except IndexError as e:
+                        tool_response = {"MESSAGE": "TOOL USE CANNOT BE USED FOR THIS QUESTION. PLEASE CREATE A NEW TOOL CONFIG FILE AND TRY AGAIN."}
+                    except Exception as e:
+                        tool_response = {}
+                        print(e)
+                
+                if not isinstance(tool_response, dict):
+                    print("TOOL USE RESPONSE IS NOT A VALID JSON FORMAT")
+                    tool_response = {}
+
+                print("TOOL USE RESPONSE:", tool_response)
+
+                st.write(f"**Tool Use Response**:\n")
+                st.json(tool_response)
+                st.write("\n")
 
         if "Comprehend" in selected_services:
             print("Adding Comrehend analysis to response.")
@@ -406,7 +550,7 @@ def main():
         if "Polly" in selected_services:
             print("Adding Polly analysis to response.")
             with st.expander("Amazon Polly - Text to Speech", expanded=True):
-                with st.spinner("Processing Amazon Polly voice response from Claude 3"):
+                with st.spinner(f"Processing Amazon Polly voice response from {model_providers[st.session_state.modelProvider]['model']}"):
                     voice_id = 'Matthew'  # You can choose a different voice ID if desired
                     audio_data = synthesize_speech(response, voice_id)
                     st.audio(audio_data, format='audio/mp3')
@@ -431,8 +575,13 @@ def main():
 
                         markd = markdown_escape(all_text)
 
-                        markd = markdown2(text=markd, tokens=tokens_answer, bg_color="#90EE90")
-                        markd = markdown2(text=markd, tokens=tokens_miss, bg_color="red")
+                        # Adding timeout handling after 10 seconds. This avoid long running jobs that can trigger an exist signal for the whole streamlit app.
+                        try:
+                            markd = markdown2(text=markd, tokens=tokens_answer, bg_color="#90EE90")
+                            markd = markdown2(text=markd, tokens=tokens_miss, bg_color="red")
+                        except TimeoutError as e:
+                            markd = all_text
+                            print(e)
 
                         st.markdown(markd, unsafe_allow_html=True)
                     else:

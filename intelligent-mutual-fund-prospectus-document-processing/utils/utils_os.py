@@ -1,9 +1,35 @@
 import os
 import boto3
 import json
+import yaml
 import glob, shutil
 from typing import List
 
+def get_region():
+    # Get region from default session
+    session = boto3.Session()
+    region = session.region_name
+    
+    return region
+
+# Function to read a document return its contents as bytes
+def read_document(path):
+    with open(path, "rb") as doc_file:
+        doc_bytes = doc_file.read()
+    return doc_bytes
+
+# Function to read a YAML file and return its contents
+def read_yaml(path):
+    try:
+        with open(path, 'r') as f:
+            data = yaml.safe_load(f)
+        return data
+    except FileNotFoundError as e:
+        print(f"File {path} not found.")
+        return e
+    except yaml.YAMLError as e:
+        print(f"Error parsing YAML file: {e}")
+        return e
 
 # Function to read a JSONL file and return its contents
 def read_jsonl(path):

@@ -13,8 +13,6 @@ Welcome to our state-of-the-art Intelligent Mutual Fund Prospectus Document Proc
 - **Pre-summarization**: Ensure detailed and context-aware responses every time.
 - **Seamless Integration**: Integrated with tools like Langchain, Streamlit, and Bedrock for a seamless experience.
 
-
-
 # Project Diagram 📊 
 
 ## Textract OCR passing text to Claude:
@@ -29,6 +27,62 @@ Welcome to our state-of-the-art Intelligent Mutual Fund Prospectus Document Proc
 
 ![Project Diagram](assets/claude_3_vision_text_diagram.png)
 
+# Run in AWS 🎯
+
+## Prerequisites
+To interact with the models, you need to [request access to the models in the region you will use](https://console.aws.amazon.com/bedrock/home?#/modelaccess)*. Make sure to read and accept the end-user license agreements or EULA.
+
+## Important Notice ⚠️
+
+> **Regional Availability**: Please note that model availability in Amazon Bedrock varies by AWS region. Check the [AWS documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html) for the most up-to-date information about which Generative AI models are available in your region.
+
+## Deployment
+
+The solution is deployed using an AWS CloudFormation template with Amazon EC2. To deploy the solution, use one of the following CloudFormation templates and follow the instructions below.
+
+| AWS Region | AWS CloudFormation Template URL |
+|:-----------|:----------------------------|
+| us-east-1 (N. Virginia) |<a href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=idp-solution-fsi&templateURL=" target="_blank">Launch stack</a> |
+| us-east-2 (Ohio) |<a href="https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/new?stackName=idp-solution-fsi&templateURL=" target="_blank">Launch stack</a> |
+| us-west-2 (Oregon) |<a href="https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=idp-solution-fsi&templateURL=" target="_blank">Launch stack</a> |
+| ap-northeast-1 (Tokyo) |<a href="https://console.aws.amazon.com/cloudformation/home?region=ap-northeast-1#/stacks/new?stackName=idp-solution-fsi&templateURL=" target="_blank">Launch stack</a> |
+| ap-south-1 (Mumbai) |<a href="https://console.aws.amazon.com/cloudformation/home?region=ap-south-1#/stacks/new?stackName=idp-solution-fsi&templateURL=" target="_blank">Launch stack</a> |
+| ap-southeast-1 (Singapore) |<a href="https://console.aws.amazon.com/cloudformation/home?region=ap-southeast-1#/stacks/new?stackName=idp-solution-fsi&templateURL=" target="_blank">Launch stack</a> |
+| ap-southeast-2 (Sydney) |<a href="https://console.aws.amazon.com/cloudformation/home?region=ap-southeast-2#/stacks/new?stackName=idp-solution-fsi&templateURL=" target="_blank">Launch stack</a> |
+| eu-central-1 (Frankfurt) |<a href="https://console.aws.amazon.com/cloudformation/home?region=eu-central-1#/stacks/new?stackName=idp-solution-fsi&templateURL=" target="_blank">Launch stack</a> |
+| eu-west-1 (Ireland) |<a href="https://console.aws.amazon.com/cloudformation/home?region=eu-west-1#/stacks/new?stackName=idp-solution-fsi&templateURL=" target="_blank">Launch stack</a> |
+| eu-west-3 (Paris) |<a href="https://console.aws.amazon.com/cloudformation/home?region=eu-west-3#/stacks/new?stackName=idp-solution-fsi&templateURL=" target="_blank">Launch stack</a> |
+
+This CloudFormation template launches an EC2 instance that includes all dependencies for hosting an streamlit application with Intelligent Document Processing workflows.
+
+1. Click on one of the links above to deploy the solution via CloudFormation in your AWS account. 
+
+2. Click the Upload a template file bottom and then upload the [deployment.yaml](cloudformation/deployment.yaml). Click the orange Next button located in the bottom right corner of the console to configure the deployment.
+
+![CloudFormation Configuration](assets/cloudformation_config.png)
+
+3. Set a stack name, and you can either provider your own `VPC ID` or configure the CIDR Blocks to create a new VPC. To learn more about CIDR Blocks on VPC, click [here](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-cidr-blocks.html).
+
+4. Select your desired EC2 instance type.
+
+5. Once you have decided on a stack name, and configured the parameters click Next to continue.
+
+6. On the next step, Configure stack options, leave all values as they are and click Next to continue.
+
+7. On the Review step
+
+    a. Check the three boxes under Capabilities and transforms to acknowledge the template will create IAM resources and leverage transforms.
+
+    b. Click the Create stack button located at the bottom of the page to deploy the template.
+
+    The stack should take around 10 minutes to deploy.
+
+7. Open the generated **WebUiURL** Url from outputs above i.e. `http:xxx.xxx.xxx.xxx`. **Note:** The app uses *http* requests to communicate with the backend server rather than *https* requests.
+
+8. Go to [Cognito](https://aws.amazon.com/cognito/), select the User Pool created by CloudFormation and create a new user.
+
+9. Login with the user and password created in Cognito.
+
 # Run Locally 💻
 
 ## Intelligent Mutual Fund Prospectus Document Processing Demo
@@ -42,7 +96,7 @@ This repository beautifully marries the capabilities of:
 
 ### S3 Bucket
 
-Please create a S3 Bucket with a unique name and set an env variable called "BUCKET_NAME" before running `run.sh`. If you'd like to use the AWS CLI, you can run the following command to create a S3 bucket:
+Please create a S3 Bucket with a unique name and set an env variable called "BUCKET_NAME". If you'd like to use the AWS CLI, you can run the following command to create a S3 bucket:
 
 ```
 BUCKET_NAME=<TYPE YOUR BUCKET NAME>
@@ -53,6 +107,16 @@ Then you can set env. var as:
 
 ```
 export BUCKET_NAME=$BUCKET_NAME
+```
+
+### Cognito Authentication
+
+Please create a User Pool with a unique name and store the "userPoolId", "appClientId", and "appClientSecret" in Secrets Manager. Then save the Secrets ID as an env variable called "SECRET_NAME" before running `run.sh`.
+
+Then you can set env. var as:
+
+```
+export SECRET_NAME=<YOUR SECRET NAME>
 ```
 
 ## Configure AWS command line and set credentials and region
@@ -75,7 +139,6 @@ conda activate financialqaenv
 pip install --upgrade pip
 pip install --upgrade -r requirements.txt
 ```
-
 
 ## Run
 
@@ -190,6 +253,7 @@ To make the most out of our project, familiarize yourself with these key compone
 - [Rubén Afonso](https://www.linkedin.com/in/rubenafonso/)
 - [Samuel Baruffi](https://www.linkedin.com/in/samuelbaruffi/)
 - [Liam Knowles](https://www.linkedin.com/in/liam-knowles)
+- [Armando Diaz](https://www.linkedin.com/in/armando-diaz-gonzalez/)
 
 # Contributors
 
