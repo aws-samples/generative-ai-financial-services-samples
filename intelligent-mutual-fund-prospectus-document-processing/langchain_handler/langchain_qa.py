@@ -8,81 +8,96 @@ from textractprettyprinter.t_pretty_print import get_text_from_layout_json
 import os
 import pypdfium2 as pdfium
 from utils.nltk_stopword import check_nltk_package
-from utils.utils_os import read_document
+from utils.utils_os import read_document, get_region
 
 check_nltk_package('stopwords')
 
 # Ensure that the Python version is compatible with the requirements
 def validate_environment():
     assert platform.python_version() >= "3.10.6"
+    
+def region_to_cris_profile():
+    region = get_region()
+    preffix = region.split('-')[0]
+    
+    if preffix == "us":
+        profile = "us"
+    elif preffix == "ap":
+        profile = "pac"
+    elif preffix == "eu":
+        profile = "eu"
+    else:
+        raise "This region does not support Cross Inference Profiles. Please try a different region."
+    return profile
 
 # Function to get configurations for different Bedrock models
 def amazon_bedrock_models():
+    profile = region_to_cris_profile()
     return {
-        "us.meta.llama3-2-11b-instruct-v1:0": {
+        f"{profile}.meta.llama3-2-11b-instruct-v1:0": {
             "temperature": 0.0,
             "topP": .999,
             "maxTokens": 4096,
             "inputTokenCost": 0.00016,
             "outputTokenCost": 0.00016
         },
-        "us.meta.llama3-2-90b-instruct-v1:0": {
+        f"{profile}.meta.llama3-2-90b-instruct-v1:0": {
             "temperature": 0.0,
             "topP": .999,
             "maxTokens": 4096,
             "inputTokenCost": 0.00072,
             "outputTokenCost": 0.00072
         },
-        "us.amazon.nova-micro-v1:0": {
+        f"{profile}.amazon.nova-micro-v1:0": {
             "temperature": 0.0,
             "topP": .999,
             "maxTokens": 4096,
             "inputTokenCost": 0.000035,
             "outputTokenCost": 0.00014
         },
-        "us.amazon.nova-lite-v1:0": {
+        f"{profile}.amazon.nova-lite-v1:0": {
             "temperature": 0.0,
             "topP": .999,
             "maxTokens": 4096,
             "inputTokenCost": 0.00006,
             "outputTokenCost":0.00024
         },
-        "us.amazon.nova-pro-v1:0": {
+        f"{profile}.amazon.nova-pro-v1:0": {
             "temperature": 0.0,
             "topP": .999,
             "maxTokens": 4096,
             "inputTokenCost": 0.0008,
             "outputTokenCost": 0.0032
         },
-        "us.anthropic.claude-3-haiku-20240307-v1:0": {
+        f"{profile}.anthropic.claude-3-haiku-20240307-v1:0": {
             "temperature": 0.0,
             "topP": .999,
             "maxTokens": 4096,
             "inputTokenCost": 0.00025,
             "outputTokenCost": 0.00125
         },
-        "us.anthropic.claude-3-5-haiku-20241022-v1:0": {
+        f"{profile}.anthropic.claude-3-5-haiku-20241022-v1:0": {
             "temperature": 0.0,
             "topP": .999,
             "maxTokens": 4096,
             "inputTokenCost": 0.0008,
             "outputTokenCost": 0.004
         },
-        "us.anthropic.claude-3-sonnet-20240229-v1:0": {
+        f"{profile}.anthropic.claude-3-sonnet-20240229-v1:0": {
             "temperature": 0.0,
             "topP": .999,
             "maxTokens": 4096,
             "inputTokenCost": 0.003,
             "outputTokenCost": 0.015
         },      
-        "us.anthropic.claude-3-5-sonnet-20240620-v1:0": {
+        f"{profile}.anthropic.claude-3-5-sonnet-20240620-v1:0": {
             "temperature": 0.0,
             "topP": .999,
             "maxTokens": 4096,
             "inputTokenCost": 0.003,
             "outputTokenCost": 0.015
         },
-        "us.anthropic.claude-3-5-sonnet-20241022-v2:0": {
+        f"{profile}.anthropic.claude-3-5-sonnet-20241022-v2:0": {
             "temperature": 0.0,
             "topP": .999,
             "maxTokens": 4096,

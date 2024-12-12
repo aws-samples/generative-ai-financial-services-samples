@@ -5,6 +5,13 @@ import yaml
 import glob, shutil
 from typing import List
 
+def get_region():
+    # Get region from default session
+    session = boto3.Session()
+    region = session.region_name
+    
+    return region
+
 # Function to read a document return its contents as bytes
 def read_document(path):
     with open(path, "rb") as doc_file:

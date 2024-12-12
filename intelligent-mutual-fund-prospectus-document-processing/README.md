@@ -32,14 +32,26 @@ Welcome to our state-of-the-art Intelligent Mutual Fund Prospectus Document Proc
 ## Prerequisites
 To interact with the models, you need to [request access to the models in the region you will use](https://console.aws.amazon.com/bedrock/home?#/modelaccess)*. Make sure to read and accept the end-user license agreements or EULA.
 
+## Important Notice ⚠️
+
+> **Regional Availability**: Please note that model availability in Amazon Bedrock varies by AWS region. Check the [AWS documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/models-regions.html) for the most up-to-date information about which Generative AI models are available in your region.
+
 ## Deployment
 
 The solution is deployed using an AWS CloudFormation template with Amazon EC2. To deploy the solution, use one of the following CloudFormation templates and follow the instructions below.
 
 | AWS Region | AWS CloudFormation Template URL |
 |:-----------|:----------------------------|
-| us-east-1 (N. Virginia) |<a href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=llamacpp&templateURL=" target="_blank">Launch stack</a> |
-| us-west-2 (Oregon) |<a href="https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=llamacpp&templateURL=" target="_blank">Launch stack</a> |
+| us-east-1 (N. Virginia) |<a href="https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?stackName=idp-solution-fsi&templateURL=" target="_blank">Launch stack</a> |
+| us-east-2 (Ohio) |<a href="https://console.aws.amazon.com/cloudformation/home?region=us-east-2#/stacks/new?stackName=idp-solution-fsi&templateURL=" target="_blank">Launch stack</a> |
+| us-west-2 (Oregon) |<a href="https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?stackName=idp-solution-fsi&templateURL=" target="_blank">Launch stack</a> |
+| ap-northeast-1 (Tokyo) |<a href="https://console.aws.amazon.com/cloudformation/home?region=ap-northeast-1#/stacks/new?stackName=idp-solution-fsi&templateURL=" target="_blank">Launch stack</a> |
+| ap-south-1 (Mumbai) |<a href="https://console.aws.amazon.com/cloudformation/home?region=ap-south-1#/stacks/new?stackName=idp-solution-fsi&templateURL=" target="_blank">Launch stack</a> |
+| ap-southeast-1 (Singapore) |<a href="https://console.aws.amazon.com/cloudformation/home?region=ap-southeast-1#/stacks/new?stackName=idp-solution-fsi&templateURL=" target="_blank">Launch stack</a> |
+| ap-southeast-2 (Sydney) |<a href="https://console.aws.amazon.com/cloudformation/home?region=ap-southeast-2#/stacks/new?stackName=idp-solution-fsi&templateURL=" target="_blank">Launch stack</a> |
+| eu-central-1 (Frankfurt) |<a href="https://console.aws.amazon.com/cloudformation/home?region=eu-central-1#/stacks/new?stackName=idp-solution-fsi&templateURL=" target="_blank">Launch stack</a> |
+| eu-west-1 (Ireland) |<a href="https://console.aws.amazon.com/cloudformation/home?region=eu-west-1#/stacks/new?stackName=idp-solution-fsi&templateURL=" target="_blank">Launch stack</a> |
+| eu-west-3 (Paris) |<a href="https://console.aws.amazon.com/cloudformation/home?region=eu-west-3#/stacks/new?stackName=idp-solution-fsi&templateURL=" target="_blank">Launch stack</a> |
 
 This CloudFormation template launches an EC2 instance that includes all dependencies for hosting an streamlit application with Intelligent Document Processing workflows.
 
@@ -47,7 +59,9 @@ This CloudFormation template launches an EC2 instance that includes all dependen
 
 2. Click the Upload a template file bottom and then upload the [deployment.yaml](cloudformation/deployment.yaml). Click the orange Next button located in the bottom right corner of the console to configure the deployment.
 
-3. Set a stack name, and you can either provider your own `VPC ID` or configure the CIDR Blocks to create a new VPC.
+![CloudFormation Configuration](assets/cloudformation_config.png)
+
+3. Set a stack name, and you can either provider your own `VPC ID` or configure the CIDR Blocks to create a new VPC. To learn more about CIDR Blocks on VPC, click [here](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-cidr-blocks.html).
 
 4. Select your desired EC2 instance type.
 
@@ -65,7 +79,7 @@ This CloudFormation template launches an EC2 instance that includes all dependen
 
 7. Open the generated **WebUiURL** Url from outputs above i.e. `http:xxx.xxx.xxx.xxx`. **Note:** The app uses *http* requests to communicate with the backend server rather than *https* requests.
 
-8. Go to Cognito, select the User Pool created by CloudFormation and create a new user.
+8. Go to [Cognito](https://aws.amazon.com/cognito/), select the User Pool created by CloudFormation and create a new user.
 
 9. Login with the user and password created in Cognito.
 

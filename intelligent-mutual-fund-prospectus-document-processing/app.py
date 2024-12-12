@@ -20,7 +20,7 @@ from utils.utils_text import (
     text_tokenizer,
 )
 from utils.utils_os import (
-    read_yaml
+    read_json
 )
 import boto3
 import io
@@ -353,7 +353,7 @@ def main():
         ocr_tools = ["Textract",f"{model_providers[st.session_state.modelProvider]['model']} Vision (Experimental)", f"{model_providers[st.session_state.modelProvider]['model']} Vision & Textract (Experimental)", "Converse API - DocumentBlock (Experimental)"]
         if (st.session_state.modelProvider == "Meta"):
             ocr_tools = [ocr_tools[0], ocr_tools[-1]]
-        st.session_state.ocr_tool = st.selectbox("Select OCR Tool", ocr_tools)
+        st.session_state.ocr_tool = st.selectbox("Select Document Reader Tool", ocr_tools)
         if (st.session_state.ocr_tool != "Textract") and (st.session_state.modelProvider == "Amazon Nova"):
             compatible_models.remove('us.amazon.nova-micro-v1:0')
         if (st.session_state.ocr_tool not in ["Textract", "Converse API - DocumentBlock (Experimental)"]) and (st.session_state.modelProvider == "Anthropic"):
@@ -373,7 +373,7 @@ def main():
         elif demo_version == "Mutual Fund Examples":
             document_repo_file_path = './docs/mutual_fund/'
         
-        data = read_yaml(document_repo_file_path + 'data.yaml')
+        data = read_json(document_repo_file_path + 'data.json')
         
         # Get questions
         questions = ["Ask your question"] + [row['prompt'] for row in data]
