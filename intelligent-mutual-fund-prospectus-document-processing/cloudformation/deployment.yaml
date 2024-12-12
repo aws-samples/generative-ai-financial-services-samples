@@ -49,8 +49,24 @@ Mappings:
   AMIRegionMap: # Ubuntu Server 24.04 LTS (HVM),EBS General Purpose (SSD) Volume Type
     us-east-1:
       ami: ami-0e2c8caa4b6378d8c
+    us-east-2:
+      ami: ami-036841078a4b68e14
     us-west-2:
       ami: ami-05d38da78ce859165
+    ap-south-1:
+      ami: ami-053b12d3152c0cc71
+    ap-southeast-1:
+      ami: ami-06650ca7ed78ff6fa
+    ap-southeast-2:
+      ami: ami-003f5a76758516d1e
+    ap-northeast-1:
+      ami: ami-0b2cd2a95639e0e5b
+    eu-central-1:
+      ami: ami-0a628e1e89aaedf80
+    eu-west-1:
+      ami: ami-0e9085e60087ce171
+    eu-west-3:
+      ami: ami-09be70e689bddcef5
 
 Resources:
 # S3 Bucket with simplified configuration
