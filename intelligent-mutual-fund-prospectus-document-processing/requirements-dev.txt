@@ -1,6 +1,6 @@
 boto3==1.34.23
 botocore==1.34.23
-langchain==0.1.12
+langchain==0.3.11
 langchain-community==0.0.28
 nltk==3.8.1
 opensearch-py==2.4.2
