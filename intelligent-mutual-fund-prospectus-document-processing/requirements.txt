@@ -11,3 +11,6 @@ pdfplumber
 python-dotenv
 pypdfium2
 amazon-textract-textractor
+amazon-textract-prettyprinter
+openpyxl
+streamlit-cognito-auth #==1.2.0
