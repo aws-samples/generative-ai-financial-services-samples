@@ -10,6 +10,8 @@ This repository contains examples of solving financial services use-cases using 
 
 2. [Intelligent Retrieval-Augmented Generation (RAG) for Proxy Documents - ProxyBot](./intelligent-retrieval-augmented-generation-for-proxy-documents-proxybot): This module contains state-of-the-art Intelligent Retrieval for Proxy documents. We have leveraged unique extraction and chunking strategy, advanced retrieval mechanism and automated workflow to ensure we have robust responses and source indicators.
 
+3. [Hyper-Personalization for Retail Banking](./retail-bank-hyper-personalization): This sample demonstrates how to leverage Generative AI for hyperpersonalization in retail banking, by delivering tailored marketing messages to individual customers at scale. Additionally, it illustrates how GenAI's reasoning capabilities can be employed for compliance review, ensuring that personalized marketing content adheres to brand guidelines and regulatory requirements.
+
 More use-cases to be added soon.
 
 ## Contributions
