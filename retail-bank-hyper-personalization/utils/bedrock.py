@@ -7,15 +7,16 @@ def fetch_model_ids():
     client = boto3.client('bedrock', region_name='us-west-2')    
 
     # List models
-    res = client.list_foundation_models(
-        byInferenceType='ON_DEMAND'
+    res = client.list_inference_profiles(
+        maxResults=100,  # Maximum number of results to return
+        typeEquals='SYSTEM_DEFINED'  # Filter by profile type (SYSTEM_DEFINED or APPLICATION)
     )
-    model_ids = res['modelSummaries']
-    model_ids = [
-        el['modelId'] for el in model_ids 
-        if'claude-3' in el['modelId']
-                 ]
+    profiles = res['inferenceProfileSummaries']  # List of inference profile summaries
 
+    model_ids = [
+        el['inferenceProfileId'] for el in profiles 
+        if any(substring in el['inferenceProfileId'] for substring in ['claude-3-5', 'llama3-3-70b', 'nova'])
+                    ]
     return model_ids
 
 def invoke_bedrock(model_id, prompt):
