@@ -12,6 +12,7 @@ Welcome to our state-of-the-art Intelligent Mutual Fund Prospectus Document Proc
 - **Mutual Fund Prospectus-centric RAG Workflow**: A robust model that understands the intricacies of the Mutual Fund Prospectus.
 - **Pre-summarization**: Ensure detailed and context-aware responses every time.
 - **Seamless Integration**: Integrated with tools like Langchain, Streamlit, and Bedrock for a seamless experience.
+- **Optional Authentication**: Cognito authentication can now be enabled or disabled based on your requirements.
 
 # Project Diagram 📊 
 
@@ -65,11 +66,13 @@ This CloudFormation template launches an EC2 instance that includes all dependen
 
 4. Select your desired EC2 instance type.
 
-5. Once you have decided on a stack name, and configured the parameters click Next to continue.
+5. Choose whether to enable Cognito authentication. By default, authentication is disabled.
 
-6. On the next step, Configure stack options, leave all values as they are and click Next to continue.
+6. Once you have decided on a stack name, and configured the parameters click Next to continue.
 
-7. On the Review step
+7. On the next step, Configure stack options, leave all values as they are and click Next to continue.
+
+8. On the Review step
 
     a. Check the three boxes under Capabilities and transforms to acknowledge the template will create IAM resources and leverage transforms.
 
@@ -77,11 +80,11 @@ This CloudFormation template launches an EC2 instance that includes all dependen
 
     The stack should take around 10 minutes to deploy.
 
-7. Open the generated **WebUiURL** Url from outputs above i.e. `http:xxx.xxx.xxx.xxx`. **Note:** The app uses *http* requests to communicate with the backend server rather than *https* requests.
+9. Open the generated **WebUiURL** Url from outputs above i.e. `http:xxx.xxx.xxx.xxx`. **Note:** The app uses *http* requests to communicate with the backend server rather than *https* requests.
 
-8. Go to [Cognito](https://aws.amazon.com/cognito/), select the User Pool created by CloudFormation and create a new user.
-
-9. Login with the user and password created in Cognito.
+10. If Cognito authentication is enabled:
+    - Go to [Cognito](https://aws.amazon.com/cognito/), select the User Pool created by CloudFormation and create a new user.
+    - Login with the user and password created in Cognito.
 
 # Run Locally 💻
 
@@ -109,11 +112,21 @@ Then you can set env. var as:
 export BUCKET_NAME=$BUCKET_NAME
 ```
 
-### Cognito Authentication
+### Authentication Configuration
 
-Please create a User Pool with a unique name and store the "userPoolId", "appClientId", and "appClientSecret" in Secrets Manager. Then save the Secrets ID as an env variable called "SECRET_NAME" before running `run.sh`.
+The application now supports optional Cognito authentication. You can control this using the `COGNITO_ENABLED` environment variable:
 
-Then you can set env. var as:
+```
+# To disable authentication (default)
+export COGNITO_ENABLED=false
+
+# To enable authentication
+export COGNITO_ENABLED=true
+```
+
+If authentication is enabled, you'll need to configure Cognito:
+
+Please create a User Pool with a unique name and store the "userPoolId", "appClientId", and "appClientSecret" in Secrets Manager. Then save the Secrets ID as an env variable called "SECRET_NAME".
 
 ```
 export SECRET_NAME=<YOUR SECRET NAME>
@@ -146,7 +159,7 @@ Before running the application, please ensure you have access to Amazon Bedrock 
 
 Also, to setup your AWS credentials, see this [reference](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html) for AWS Command Line Interface and getting started with authentication and access credentials.
 
-Launch the Streamlit application:
+The application includes a convenient `run.sh` script that will prompt for any missing environment variables:
 
 ```bash
 ./run.sh
@@ -159,7 +172,6 @@ streamlit run app.py
 ```
 
 The application will pick your default AWS credentials in this case.
-
 
 ### Known Issues
 
@@ -180,22 +192,54 @@ docker build -t pdf-advanced-rag-financial:latest .
 docker run -p 8501:8501 \
    -e AWS_ACCESS_KEY_ID='<YOUR_ACCESS_KEY>' \
    -e AWS_SECRET_ACCESS_KEY='<YOUR_SECRET_KEY>' \
-   -e AWS_DEFAULT_REGION='<YOUR_DEFAULT_REGION>' \   
+   -e AWS_DEFAULT_REGION='<YOUR_DEFAULT_REGION>' \
+   -e BUCKET_NAME='<YOUR_BUCKET_NAME>' \
+   -e COGNITO_ENABLED='false' \
    pdf-advanced-rag-financial:latest
+```
 
+If Cognito authentication is enabled, add the SECRET_NAME environment variable:
+
+```bash
+docker run -p 8501:8501 \
+   -e AWS_ACCESS_KEY_ID='<YOUR_ACCESS_KEY>' \
+   -e AWS_SECRET_ACCESS_KEY='<YOUR_SECRET_KEY>' \
+   -e AWS_DEFAULT_REGION='<YOUR_DEFAULT_REGION>' \
+   -e BUCKET_NAME='<YOUR_BUCKET_NAME>' \
+   -e COGNITO_ENABLED='true' \
+   -e SECRET_NAME='<YOUR_SECRET_NAME>' \
+   pdf-advanced-rag-financial:latest
 ```
 
 Upon successful execution, visit `http://localhost:8501` to access the Streamlit app running within your Docker container.
 
-If you prefer to use the `docker-compose.yml`, please run as follows:
+If you prefer to use the `docker-compose.yml`, you can use a `.env` file with docker-compose to manage your environment variables more easily:
 
-1. Build the container image.
+1. Create a `.env` file in the project root directory:
+
+```bash
+# Required variables
+BUCKET_NAME=your-s3-bucket-name
+
+# Authentication configuration (true/false)
+COGNITO_ENABLED=false
+
+# Only required if COGNITO_ENABLED=true
+SECRET_NAME=your-cognito-secret-name
+
+# Optional: AWS credentials (if not using ~/.aws mount)
+# AWS_ACCESS_KEY_ID=your-access-key
+# AWS_SECRET_ACCESS_KEY=your-secret-key
+# AWS_DEFAULT_REGION=your-aws-region
+```
+
+2. Build the container image.
 
 ```bash
 docker-compose build --no-cache
 ```
 
-2. Start the container image.
+3. Start the container image.
 ```bash
 docker-compose up
 ```
@@ -219,7 +263,7 @@ In either cases, please note your EC2 url and ensure your streamlit is exposed t
 
 Our project follows a clear and intuitive structure to ensure ease of navigation:
 
-- `run.sh`: This shell script acts as the entry point for our application. It's tailored to initialize the Streamlit app.
+- `run.sh`: This shell script acts as the entry point for our application. It's tailored to initialize the Streamlit app and prompt for required environment variables.
   
 - `app.py`: The heart of our application. This Python script handles the core logic, interfaces with the RAG model, and serves responses. Dive into it to understand the intricate workings of our advanced RAG workflow.
 
@@ -258,3 +302,4 @@ To make the most out of our project, familiarize yourself with these key compone
 # Contributors
 
 [![contributors](https://contrib.rocks/image?repo=aws-samples/generative-ai-financial-services-samples&max=2000)](https://github.com/aws-samples/generative-ai-financial-services-samples/graphs/contributors)
+```

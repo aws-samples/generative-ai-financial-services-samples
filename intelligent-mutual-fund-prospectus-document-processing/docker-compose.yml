@@ -9,9 +9,11 @@ services:
     volumes:
       - .:/app
       - ./cache:/app/cache
+      - ~/.aws:/root/.aws:ro
     environment:
-      PYTHONUNBUFFERED: 1
-    env_file:
-      - .env
+      - PYTHONUNBUFFERED=1
+      - BUCKET_NAME=$BUCKET_NAME
+      - COGNITO_ENABLED=${COGNITO_ENABLED:-false}
+      - SECRET_NAME=$SECRET_NAME
     tty: true
-    restart: always
+    # restart: always
