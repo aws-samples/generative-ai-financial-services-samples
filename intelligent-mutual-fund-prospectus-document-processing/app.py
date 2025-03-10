@@ -5,7 +5,6 @@ from botocore.exceptions import ClientError
 import streamlit as st
 from utils.auth import Auth
 import re
-import json
 import base64
 from langchain_handler.langchain_qa import (
     search_and_answer_pdf,
@@ -69,23 +68,27 @@ def timeout_decorator(seconds=10):
 if "BUCKET_NAME" not in os.environ:
     raise Exception("S3 Bucket must be set for Textract processing. Please see README for more information")
 
-if "SECRET_NAME" not in os.environ:
+# Replace the existing SECRET_NAME check with Cognito enable logic
+COGNITO_ENABLED = os.environ.get('COGNITO_ENABLED', 'False').lower() in ('true')
+if COGNITO_ENABLED and "SECRET_NAME" not in os.environ:
     raise Exception("Secret must be set for authentication in Cognito. Please see README for more information")
 
 # Set page title
 st.set_page_config(page_title="Q/A App", layout="wide")
 
-# Initialise CognitoAuthenticator
-authenticator = Auth.get_authenticator(os.environ['SECRET_NAME'])
+# Authenticate user only if Cognito is enabled
+if COGNITO_ENABLED:
+    authenticator = Auth.get_authenticator(os.environ['SECRET_NAME'])
+    is_logged_in = authenticator.login()
+    if not is_logged_in:
+        st.stop()
+else:
+    is_logged_in = True  # Skip authentication if Cognito is disabled
 
-# Authenticate user, and stop here if not logged in
-is_logged_in = authenticator.login()
-if not is_logged_in:
-    st.stop()
 
 def logout():
-    # Set page title
-    authenticator.logout()
+    if COGNITO_ENABLED:
+        authenticator.logout()
 
 def synthesize_speech(text, voice_id):
     polly_client = boto3.Session().client('polly')
