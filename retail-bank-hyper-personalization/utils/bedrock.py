@@ -7,47 +7,48 @@ def fetch_model_ids():
     client = boto3.client('bedrock', region_name='us-west-2')    
 
     # List models
-    res = client.list_foundation_models(
-        byInferenceType='ON_DEMAND'
+    res = client.list_inference_profiles(
+        maxResults=100,  # Maximum number of results to return
+        typeEquals='SYSTEM_DEFINED'  # Filter by profile type (SYSTEM_DEFINED or APPLICATION)
     )
-    model_ids = res['modelSummaries']
-    model_ids = [
-        el['modelId'] for el in model_ids 
-        if'claude-3' in el['modelId']
-                 ]
+    profiles = res['inferenceProfileSummaries']  # List of inference profile summaries
 
+    model_ids = [
+        el['inferenceProfileId'] for el in profiles 
+        if any(substring in el['inferenceProfileId'] for substring in ['claude-3-5', 'llama3-3-70b', 'nova'])
+                    ]
     return model_ids
 
 def invoke_bedrock(model_id, prompt):
+    client = boto3.client('bedrock-runtime', region_name='us-west-2')
     
-    client = boto3.client('bedrock-runtime', region_name='us-west-2')    
-    # Format the request payload using the model's native structure.
-    native_request = {
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 100000,
-        "temperature": 0.5,
-        "messages": [
+    # Create the request structure for the Converse API
+    request = {
+        'modelId': model_id,
+        'messages': [
             {
-                "role": "user",
-                "content": [{"type": "text", "text": prompt}],
+                'role': 'user',
+                'content': [
+                    {
+                        'text': prompt
+                    }
+                ]
             }
         ],
+        'inferenceConfig': {
+            'maxTokens': 4096,
+            'temperature': 0.5
+        }
     }
-    # Convert the native request to JSON.
-    request = json.dumps(native_request)
 
     try:
-        # Invoke the model with the request.
-        response = client.invoke_model(modelId=model_id, body=request)
+        # Use the converse API to send the request
+        response = client.converse(**request)
+        
+        # Extract the response text
+        response_text = response['output']['message']['content'][0]['text']
+        return response_text
 
     except (ClientError, Exception) as e:
         print(f"ERROR: Can't invoke '{model_id}'. Reason: {e}")
         exit(1)
-
-    # Decode the response body.
-    model_response = json.loads(response["body"].read())
-
-    # Extract and print the response text.
-    response_text = model_response["content"][0]["text"]
-    
-    return response_text
