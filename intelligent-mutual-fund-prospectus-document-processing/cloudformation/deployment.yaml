@@ -41,9 +41,17 @@ Parameters:
     Description: 'CIDR block for public subnet 2 (only used if creating new VPC)'
     Default: '10.4.2.0/24'
     AllowedPattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$'
+  EnableCognito:
+    Type: String
+    Description: 'Enable Cognito authentication for the application'
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
 
 Conditions:
   CreateNewVPC: !Equals [!Ref ExistingVpcId, '']
+  CreateCognitoResources: !Equals [!Ref EnableCognito, 'true']
 
 Mappings:
   AMIRegionMap: # Ubuntu Server 24.04 LTS (HVM),EBS General Purpose (SSD) Volume Type
@@ -232,6 +240,7 @@ Resources:
 # Cognito User Pool
   CognitoUserPool:
     Type: 'AWS::Cognito::UserPool'
+    Condition: CreateCognitoResources
     Properties:
       UserPoolName: !Sub ${AWS::StackName}-user-pool
       AdminCreateUserConfig:
@@ -258,6 +267,7 @@ Resources:
   # User Pool Client
   CognitoUserPoolClient:
     Type: 'AWS::Cognito::UserPoolClient'
+    Condition: CreateCognitoResources
     Properties:
       UserPoolId: !Ref CognitoUserPool
       ClientName: !Sub ${AWS::StackName}-app-client
@@ -270,6 +280,7 @@ Resources:
   # Secrets Manager Secret
   CognitoSecret:
     Type: 'AWS::SecretsManager::Secret'
+    Condition: CreateCognitoResources
     Properties:
       Name: !Sub ${AWS::StackName}-cognito-credentials
       Description: 'Cognito credentials for user and identity pools'
@@ -361,13 +372,20 @@ Resources:
           pip install -r requirements.txt
 
           export BUCKET_NAME=${BucketName}
-          export SECRET_NAME=${AWS::StackName}-cognito-credentials
+          export COGNITO_ENABLED=${EnableCognito}
+
+          # Only set SECRET_NAME if Cognito is enabled
+          if [ "${EnableCognito}" = "true" ]; then
+            export SECRET_NAME=${AWS::StackName}-cognito-credentials
+          fi
 
           # Method 3: Using cat with heredoc
           cat << EOF > .env
           AWS_DEFAULT_REGION=${AWS::Region}
           BUCKET_NAME=${BucketName}
-          SECRET_NAME=${AWS::StackName}-cognito-credentials
+          COGNITO_ENABLED=${EnableCognito}
+          # Conditionally include SECRET_NAME only if EnableCognito is true
+          $( [ "${EnableCognito}" = "true" ] && echo "SECRET_NAME=${AWS::StackName}-cognito-credentials" )
           EOF
 
           # Run streamlit
@@ -388,6 +406,10 @@ Resources:
       InstanceId: !Ref EC2Instance
 
 Outputs:
+  CognitoEnabled:
+    Description: 'Cognito Authentication Status'
+    Value: !Ref EnableCognito
+  
   WebUiURL:
     Description: URL for Intelligent Document Processing Web Application (available in 10 mins)
     Value: !Sub "http://${EIP}"
@@ -427,18 +449,18 @@ Outputs:
 
   UserPoolId:
     Description: 'ID of the Cognito User Pool'
-    Value: !Ref CognitoUserPool
+    Value: !If [CreateCognitoResources, !Ref CognitoUserPool, 'Cognito Disabled']
     Export:
       Name: !Sub ${AWS::StackName}-UserPoolId
 
   UserPoolClientId:
     Description: 'ID of the Cognito User Pool Client'
-    Value: !Ref CognitoUserPoolClient
+    Value: !If [CreateCognitoResources, !Ref CognitoUserPoolClient, 'Cognito Disabled']
     Export:
       Name: !Sub ${AWS::StackName}-UserPoolClientId
 
   SecretId:
     Description: 'ID of the Secret storing Cognito credentials'
-    Value: !Sub ${AWS::StackName}-cognito-credentials
+    Value: !If [CreateCognitoResources, !Sub '${AWS::StackName}-cognito-credentials', 'Cognito Disabled']
     Export:
       Name: !Sub ${AWS::StackName}-SecretId

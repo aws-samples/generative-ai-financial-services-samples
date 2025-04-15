@@ -103,6 +103,13 @@ def amazon_bedrock_models():
             "maxTokens": 4096,
             "inputTokenCost": 0.003,
             "outputTokenCost": 0.015
+        },
+        f"{profile}.anthropic.claude-3-7-sonnet-20250219-v1:0": {
+            "temperature": 0.0,
+            "topP": .999,
+            "maxTokens": 4096,
+            "inputTokenCost": 0.003,
+            "outputTokenCost": 0.015
         }
     }
 

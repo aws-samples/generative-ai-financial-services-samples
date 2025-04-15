@@ -1,6 +1,8 @@
 # Retail Bank Hyper-Personalization 👨‍👩‍👧‍👦
 
-This demo showcases a GenAI Hyper-personalization capability for retail banking. The application utilizes advanced AI models to tailor product recommendations and marketing content based on customer profiles.
+This sample demonstrates how to leverage Generative AI for hyperpersonalization in retail banking, by delivering tailored marketing messages to individual customers at scale. Additionally, it illustrates how GenAI's reasoning capabilities can be employed for compliance review, ensuring that personalized marketing content adheres to brand guidelines and regulatory requirements.
+
+![Screen Capture](assets/screencap.png)
 
 ## 1. Key Features
 
